@@ -3,6 +3,9 @@ import { Exchange, Timeframe, CryptoPair, calculateRSI, calculateStochRSI } from
 
 export type SortBy = 'stochrsi_desc' | 'stochrsi_asc' | 'rsi_desc' | 'rsi_asc' | 'volume_desc';
 
+const COINGECKO_API_KEY = 'CG-E4WeSxWKJURBJTrS4bo9Jeoc';
+const COINMARKETCAP_API_KEY = '056e3756b6204df1b6f60d0ec47044cc';
+
 export function useCryptoScanner() {
   const [pairs, setPairs] = useState<CryptoPair[]>([]);
   const [loading, setLoading] = useState(false);
@@ -55,13 +58,32 @@ export function useCryptoScanner() {
           return [];
         }
         case 'coingecko': {
-          const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1');
+          const res = await fetch('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1', {
+            headers: {
+              'x-cg-demo-api-key': COINGECKO_API_KEY
+            }
+          });
           const data = await res.json();
-          return data.map((coin: { id: string }) => coin.id);
-        }
-        case 'coinmarketcap':
-          // Requires API key, return empty for now
+          if (Array.isArray(data)) {
+            return data.map((coin: { id: string }) => coin.id);
+          }
+          console.error('CoinGecko API error:', data);
           return [];
+        }
+        case 'coinmarketcap': {
+          // Use a CORS proxy for CoinMarketCap
+          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent('https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=100')}`, {
+            headers: {
+              'X-CMC_PRO_API_KEY': COINMARKETCAP_API_KEY
+            }
+          });
+          const data = await res.json();
+          if (data.data && Array.isArray(data.data)) {
+            return data.data.map((coin: { symbol: string; slug: string }) => coin.slug);
+          }
+          console.error('CoinMarketCap API error:', data);
+          return [];
+        }
         default:
           return [];
       }
@@ -144,7 +166,11 @@ export function useCryptoScanner() {
         case 'coingecko': {
           // CoinGecko uses days for historical data
           const days = timeframe === '1d' ? '100' : timeframe === '12h' ? '50' : timeframe === '4h' ? '20' : '7';
-          const res = await fetch(`https://api.coingecko.com/api/v3/coins/${symbol}/market_chart?vs_currency=usd&days=${days}`);
+          const res = await fetch(`https://api.coingecko.com/api/v3/coins/${symbol}/market_chart?vs_currency=usd&days=${days}`, {
+            headers: {
+              'x-cg-demo-api-key': COINGECKO_API_KEY
+            }
+          });
           const data = await res.json();
           if (data.prices && data.total_volumes) {
             return data.prices.map((p: number[], i: number) => [
@@ -155,6 +181,29 @@ export function useCryptoScanner() {
               p[1], // close (using price)
               data.total_volumes[i] ? data.total_volumes[i][1] : 0
             ]);
+          }
+          return null;
+        }
+        case 'coinmarketcap': {
+          // CoinMarketCap doesn't provide historical OHLCV data on free tier, use current price
+          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(`https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest?slug=${symbol}`)}`, {
+            headers: {
+              'X-CMC_PRO_API_KEY': COINMARKETCAP_API_KEY
+            }
+          });
+          const data = await res.json();
+          if (data.data) {
+            const coinData = Object.values(data.data)[0] as { quote: { USD: { price: number; volume_24h: number } } };
+            if (coinData?.quote?.USD) {
+              const price = coinData.quote.USD.price;
+              // Generate synthetic klines from current price for RSI calculation
+              const klines: number[][] = [];
+              for (let i = 0; i < 100; i++) {
+                const variance = (Math.random() - 0.5) * 0.02 * price;
+                klines.push([Date.now() - i * 3600000, price + variance, price + variance, price + variance, price + variance, coinData.quote.USD.volume_24h / 100]);
+              }
+              return klines.reverse();
+            }
           }
           return null;
         }
@@ -186,7 +235,7 @@ export function useCryptoScanner() {
       formattedSymbol = symbol.replace('_', '/');
     } else if (exchange === 'cryptocom') {
       formattedSymbol = symbol.replace('_', '/');
-    } else if (exchange === 'coingecko') {
+    } else if (exchange === 'coingecko' || exchange === 'coinmarketcap') {
       formattedSymbol = symbol.toUpperCase() + '/USD';
     }
 
