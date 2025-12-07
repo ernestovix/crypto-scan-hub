@@ -12,9 +12,8 @@ interface ScannerPageProps {
 
 export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
   const [timeframe, setTimeframe] = useState<Timeframe>('4h');
-  const [sortBy, setSortBy] = useState<SortBy>('mfi_desc');
-  const [mfiUpper, setMfiUpper] = useState(999);
-  const [mfiLower, setMfiLower] = useState(0);
+  const [sortBy, setSortBy] = useState<SortBy>('stochrsi_desc');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { pairs, loading, progress, loadData, sortPairs, filterPairs } = useCryptoScanner();
 
@@ -25,9 +24,9 @@ export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
   }, [exchange, timeframe, loadData]);
 
   const filteredAndSortedPairs = useMemo(() => {
-    const filtered = filterPairs(pairs, mfiLower, mfiUpper);
+    const filtered = filterPairs(pairs, searchQuery);
     return sortPairs(filtered, sortBy);
-  }, [pairs, mfiLower, mfiUpper, sortBy, filterPairs, sortPairs]);
+  }, [pairs, searchQuery, sortBy, filterPairs, sortPairs]);
 
   const handleTimeframeChange = (value: Timeframe) => {
     setTimeframe(value);
@@ -49,7 +48,7 @@ export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
             <div className="flex items-center gap-3">
               <img src={exchangeInfo?.logo} alt={exchangeInfo?.name} className="w-8 h-8" />
               <h2 className="text-2xl font-bold text-foreground">
-                {exchangeInfo?.name} - RSI & MFI Scanner
+                {exchangeInfo?.name}
               </h2>
             </div>
             <span className="text-sm text-muted-foreground">
@@ -71,12 +70,11 @@ export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
       <ScannerControls
         timeframe={timeframe}
         sortBy={sortBy}
-        mfiUpper={mfiUpper}
-        mfiLower={mfiLower}
+        searchQuery={searchQuery}
+        pairs={pairs}
         onTimeframeChange={handleTimeframeChange}
         onSortChange={setSortBy}
-        onMfiUpperChange={setMfiUpper}
-        onMfiLowerChange={setMfiLower}
+        onSearchChange={setSearchQuery}
       />
 
       {/* Progress Bar */}

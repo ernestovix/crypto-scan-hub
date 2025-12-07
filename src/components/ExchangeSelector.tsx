@@ -10,7 +10,7 @@ export function ExchangeSelector({ onSelect }: ExchangeSelectorProps) {
     <div className="flex-1 flex items-center justify-center gradient-hero min-h-screen">
       <div className="text-center px-4">
         <h1 className="text-4xl md:text-5xl font-bold mb-4 gradient-text">
-          Crypto RSI & MFI Scanner
+          Arbix OBOS
         </h1>
         <p className="text-xl text-muted-foreground mb-12">
           Real-time technical analysis across top exchanges
