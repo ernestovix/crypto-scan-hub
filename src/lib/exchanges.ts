@@ -1,4 +1,4 @@
-export type Exchange = 'binance' | 'bybit' | 'kucoin' | 'cryptocom' | 'gateio' | 'coinmarketcap' | 'coingecko' | 'coincap' | 'coinlayer';
+export type Exchange = 'binance' | 'bybit' | 'kucoin' | 'cryptocom' | 'gateio' | 'coinmarketcap' | 'coingecko';
 
 export interface ExchangeInfo {
   id: Exchange;
@@ -15,8 +15,6 @@ export const exchanges: ExchangeInfo[] = [
   { id: 'gateio', name: 'Gate.io', logo: 'https://assets.coingecko.com/markets/images/60/large/gate_io_logo1.png', hoverColor: 'hover:bg-red-600' },
   { id: 'coinmarketcap', name: 'CoinMarketCap', logo: 'https://coinmarketcap.com/apple-touch-icon.png', hoverColor: 'hover:bg-blue-500' },
   { id: 'coingecko', name: 'CoinGecko', logo: 'https://static.coingecko.com/s/coingecko-logo-8903d34ce19ca4be1c81f0db30e924154750d208683fad7ae6f2ce06c76d0a56.png', hoverColor: 'hover:bg-green-500' },
-  { id: 'coincap', name: 'CoinCap', logo: 'https://coincap.io/static/logos/coincap.png', hoverColor: 'hover:bg-purple-600' },
-  { id: 'coinlayer', name: 'CoinLayer', logo: 'https://coinlayer.com/images/logo.png', hoverColor: 'hover:bg-cyan-600' },
 ];
 
 export type Timeframe = '15m' | '30m' | '4h' | '12h' | '1d';
@@ -105,14 +103,12 @@ export function getTradingUrl(exchange: Exchange, symbol: string): string {
     cryptocom: 'https://crypto.com/exchange/trade/',
     gateio: 'https://www.gate.io/trade/',
     coinmarketcap: 'https://coinmarketcap.com/currencies/',
-    coingecko: 'https://www.coingecko.com/en/coins/',
-    coincap: 'https://coincap.io/assets/',
-    coinlayer: 'https://coinlayer.com/'
+    coingecko: 'https://www.coingecko.com/en/coins/'
   };
   
   const cleanSymbol = symbol.replace('/', '_').replace('/USDT', '').replace('_USDT', '').toLowerCase();
   
-  if (exchange === 'coinmarketcap' || exchange === 'coingecko' || exchange === 'coincap') {
+  if (exchange === 'coinmarketcap' || exchange === 'coingecko') {
     return base[exchange] + cleanSymbol;
   }
   

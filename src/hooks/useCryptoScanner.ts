@@ -59,14 +59,8 @@ export function useCryptoScanner() {
           const data = await res.json();
           return data.map((coin: { id: string }) => coin.id);
         }
-        case 'coincap': {
-          const res = await fetch('https://api.coincap.io/v2/assets?limit=100');
-          const data = await res.json();
-          return data.data.map((coin: { id: string }) => coin.id);
-        }
         case 'coinmarketcap':
-        case 'coinlayer':
-          // These require API keys, return empty for now
+          // Requires API key, return empty for now
           return [];
         default:
           return [];
@@ -164,22 +158,6 @@ export function useCryptoScanner() {
           }
           return null;
         }
-        case 'coincap': {
-          const interval = timeframe === '1d' ? 'd1' : timeframe === '12h' ? 'h12' : timeframe === '4h' ? 'h4' : 'h1';
-          const res = await fetch(`https://api.coincap.io/v2/assets/${symbol}/history?interval=${interval}`);
-          const data = await res.json();
-          if (data.data) {
-            return data.data.slice(-100).map((d: { time: number; priceUsd: string }) => [
-              d.time,
-              parseFloat(d.priceUsd),
-              parseFloat(d.priceUsd),
-              parseFloat(d.priceUsd),
-              parseFloat(d.priceUsd),
-              0
-            ]);
-          }
-          return null;
-        }
         default:
           return null;
       }
@@ -208,7 +186,7 @@ export function useCryptoScanner() {
       formattedSymbol = symbol.replace('_', '/');
     } else if (exchange === 'cryptocom') {
       formattedSymbol = symbol.replace('_', '/');
-    } else if (exchange === 'coingecko' || exchange === 'coincap') {
+    } else if (exchange === 'coingecko') {
       formattedSymbol = symbol.toUpperCase() + '/USD';
     }
 
