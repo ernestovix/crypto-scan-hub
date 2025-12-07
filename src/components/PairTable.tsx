@@ -1,4 +1,4 @@
-import { CryptoPair, Exchange, formatPrice, formatVolume, getTradingUrl } from '@/lib/exchanges';
+import { CryptoPair, Exchange, formatPrice, getTradingUrl } from '@/lib/exchanges';
 import { cn } from '@/lib/utils';
 
 interface PairTableProps {
@@ -14,10 +14,10 @@ function getRsiColor(rsi: number | null): string {
   return 'text-warning';
 }
 
-function getMfiColor(mfi: number | null): string {
-  if (mfi === null) return 'text-muted-foreground';
-  if (mfi > 80) return 'text-destructive font-bold';
-  if (mfi < 20) return 'text-success font-bold';
+function getStochRsiColor(stochRsi: number | null): string {
+  if (stochRsi === null) return 'text-muted-foreground';
+  if (stochRsi > 80) return 'text-destructive font-bold';
+  if (stochRsi < 20) return 'text-success font-bold';
   return 'text-muted-foreground';
 }
 
@@ -30,8 +30,7 @@ export function PairTable({ pairs, exchange, loading }: PairTableProps) {
             <th className="px-6 py-4 text-left font-medium">Pair</th>
             <th className="px-6 py-4 text-right font-medium">Price</th>
             <th className="px-6 py-4 text-center font-medium">RSI (14)</th>
-            <th className="px-6 py-4 text-center font-medium">MFI (14)</th>
-            <th className="px-6 py-4 text-right font-medium">Avg Volume</th>
+            <th className="px-6 py-4 text-center font-medium">StochRSI (14)</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -60,12 +59,9 @@ export function PairTable({ pairs, exchange, loading }: PairTableProps) {
                 </span>
               </td>
               <td className="px-6 py-4 text-center">
-                <span className={getMfiColor(pair.mfi)}>
-                  {pair.mfi?.toFixed(1) || '-'}
+                <span className={getStochRsiColor(pair.stochRsi)}>
+                  {pair.stochRsi?.toFixed(1) || '-'}
                 </span>
-              </td>
-              <td className="px-6 py-4 text-right text-muted-foreground font-mono">
-                ${formatVolume(pair.volume)}
               </td>
             </tr>
           ))}

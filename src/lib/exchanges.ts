@@ -1,4 +1,4 @@
-export type Exchange = 'binance' | 'bybit' | 'kucoin' | 'cryptocom' | 'gateio';
+export type Exchange = 'binance' | 'bybit' | 'kucoin' | 'cryptocom' | 'gateio' | 'coinmarketcap' | 'coingecko' | 'coincap' | 'coinlayer';
 
 export interface ExchangeInfo {
   id: Exchange;
@@ -9,10 +9,14 @@ export interface ExchangeInfo {
 
 export const exchanges: ExchangeInfo[] = [
   { id: 'binance', name: 'Binance', logo: 'https://cryptologos.cc/logos/binance-coin-bnb-logo.png', hoverColor: 'hover:bg-yellow-600' },
-  { id: 'bybit', name: 'Bybit', logo: 'https://cryptologos.cc/logos/bybit-bybit-logo.png', hoverColor: 'hover:bg-orange-600' },
+  { id: 'bybit', name: 'Bybit', logo: 'https://assets.coingecko.com/markets/images/698/large/bybit_spot.png', hoverColor: 'hover:bg-orange-600' },
   { id: 'kucoin', name: 'KuCoin', logo: 'https://cryptologos.cc/logos/kucoin-token-kcs-logo.png', hoverColor: 'hover:bg-green-600' },
   { id: 'cryptocom', name: 'Crypto.com', logo: 'https://cryptologos.cc/logos/cronos-cro-logo.png', hoverColor: 'hover:bg-blue-700' },
-  { id: 'gateio', name: 'Gate.io', logo: 'https://cryptologos.cc/logos/gatechain-token-gt-logo.png', hoverColor: 'hover:bg-red-600' },
+  { id: 'gateio', name: 'Gate.io', logo: 'https://assets.coingecko.com/markets/images/60/large/gate_io_logo1.png', hoverColor: 'hover:bg-red-600' },
+  { id: 'coinmarketcap', name: 'CoinMarketCap', logo: 'https://coinmarketcap.com/apple-touch-icon.png', hoverColor: 'hover:bg-blue-500' },
+  { id: 'coingecko', name: 'CoinGecko', logo: 'https://static.coingecko.com/s/coingecko-logo-8903d34ce19ca4be1c81f0db30e924154750d208683fad7ae6f2ce06c76d0a56.png', hoverColor: 'hover:bg-green-500' },
+  { id: 'coincap', name: 'CoinCap', logo: 'https://coincap.io/static/logos/coincap.png', hoverColor: 'hover:bg-purple-600' },
+  { id: 'coinlayer', name: 'CoinLayer', logo: 'https://coinlayer.com/images/logo.png', hoverColor: 'hover:bg-cyan-600' },
 ];
 
 export type Timeframe = '15m' | '30m' | '4h' | '12h' | '1d';
@@ -22,7 +26,7 @@ export interface CryptoPair {
   price: number;
   volume: number;
   rsi: number | null;
-  mfi: number | null;
+  stochRsi: number | null;
 }
 
 export function calculateRSI(closes: number[], period = 14): number | null {
@@ -54,37 +58,32 @@ export function calculateRSI(closes: number[], period = 14): number | null {
   return 100 - (100 / (1 + rs));
 }
 
-export function calculateMFI(highs: number[], lows: number[], closes: number[], volumes: number[], period = 14): number | null {
-  if (closes.length < period + 1) return null;
+export function calculateStochRSI(closes: number[], rsiPeriod = 14, stochPeriod = 14): number | null {
+  if (closes.length < rsiPeriod + stochPeriod + 1) return null;
   
-  const typicalPrices = closes.map((close, i) => (highs[i] + lows[i] + close) / 3);
-  const rawMoneyFlow = typicalPrices.map((tp, i) => tp * volumes[i]);
+  // Calculate RSI values for each position
+  const rsiValues: number[] = [];
   
-  const positiveFlow: number[] = [];
-  const negativeFlow: number[] = [];
-  
-  for (let i = 1; i < typicalPrices.length; i++) {
-    if (typicalPrices[i] > typicalPrices[i - 1]) {
-      positiveFlow.push(rawMoneyFlow[i]);
-      negativeFlow.push(0);
-    } else if (typicalPrices[i] < typicalPrices[i - 1]) {
-      positiveFlow.push(0);
-      negativeFlow.push(rawMoneyFlow[i]);
-    } else {
-      positiveFlow.push(0);
-      negativeFlow.push(0);
+  for (let i = rsiPeriod; i < closes.length; i++) {
+    const slicedCloses = closes.slice(0, i + 1);
+    const rsi = calculateRSI(slicedCloses, rsiPeriod);
+    if (rsi !== null) {
+      rsiValues.push(rsi);
     }
   }
   
-  const startIdx = positiveFlow.length - period;
-  if (startIdx < 0) return null;
+  if (rsiValues.length < stochPeriod) return null;
   
-  const sumPositive = positiveFlow.slice(startIdx).reduce((a, b) => a + b, 0);
-  const sumNegative = negativeFlow.slice(startIdx).reduce((a, b) => a + b, 0);
+  // Get the last stochPeriod RSI values
+  const recentRsi = rsiValues.slice(-stochPeriod);
+  const currentRsi = recentRsi[recentRsi.length - 1];
+  const minRsi = Math.min(...recentRsi);
+  const maxRsi = Math.max(...recentRsi);
   
-  if (sumNegative === 0) return 100;
-  const moneyRatio = sumPositive / sumNegative;
-  return 100 - (100 / (1 + moneyRatio));
+  if (maxRsi === minRsi) return 50; // Avoid division by zero
+  
+  // StochRSI = (RSI - min(RSI)) / (max(RSI) - min(RSI)) * 100
+  return ((currentRsi - minRsi) / (maxRsi - minRsi)) * 100;
 }
 
 export function formatPrice(p: number): string {
@@ -104,7 +103,18 @@ export function getTradingUrl(exchange: Exchange, symbol: string): string {
     bybit: 'https://www.bybit.com/en/trade/spot/',
     kucoin: 'https://www.kucoin.com/trade/',
     cryptocom: 'https://crypto.com/exchange/trade/',
-    gateio: 'https://www.gate.io/trade/'
+    gateio: 'https://www.gate.io/trade/',
+    coinmarketcap: 'https://coinmarketcap.com/currencies/',
+    coingecko: 'https://www.coingecko.com/en/coins/',
+    coincap: 'https://coincap.io/assets/',
+    coinlayer: 'https://coinlayer.com/'
   };
+  
+  const cleanSymbol = symbol.replace('/', '_').replace('/USDT', '').replace('_USDT', '').toLowerCase();
+  
+  if (exchange === 'coinmarketcap' || exchange === 'coingecko' || exchange === 'coincap') {
+    return base[exchange] + cleanSymbol;
+  }
+  
   return base[exchange] + symbol.replace('/', '_');
 }
