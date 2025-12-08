@@ -65,6 +65,8 @@ export function ScannerControls({
             onChange={(e) => onSortChange(e.target.value as SortBy)}
             className="w-full bg-secondary border border-border rounded-lg px-4 py-3 text-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all"
           >
+            <option value="combined_buy">🟢 Strong Buy (RSI+SRSI)</option>
+            <option value="combined_sell">🔴 Strong Sell (RSI+SRSI)</option>
             <option value="stochrsi_desc">StochRSI ↓ (Highest)</option>
             <option value="stochrsi_asc">StochRSI ↑ (Lowest)</option>
             <option value="rsi_desc">RSI ↓ (Highest)</option>

@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Exchange, Timeframe, CryptoPair, calculateRSI, calculateStochRSI } from '@/lib/exchanges';
 
-export type SortBy = 'stochrsi_desc' | 'stochrsi_asc' | 'rsi_desc' | 'rsi_asc' | 'volume_desc';
+export type SortBy = 'combined_buy' | 'combined_sell' | 'stochrsi_desc' | 'stochrsi_asc' | 'rsi_desc' | 'rsi_asc' | 'volume_desc';
 
 const COINGECKO_API_KEY = 'CG-E4WeSxWKJURBJTrS4bo9Jeoc';
 const COINMARKETCAP_API_KEY = '056e3756b6204df1b6f60d0ec47044cc';
@@ -37,14 +37,6 @@ export function useCryptoScanner() {
             .filter((s: { enableTrading: boolean; symbol: string }) => s.enableTrading && s.symbol.endsWith('-USDT'))
             .slice(0, 100)
             .map((s: { symbol: string }) => s.symbol);
-        }
-        case 'gateio': {
-          const res = await fetch('https://api.gateio.ws/api/v4/spot/currency_pairs');
-          const data = await res.json();
-          return data
-            .filter((s: { trade_status: string; id: string }) => s.trade_status === 'tradable' && s.id.endsWith('_USDT'))
-            .slice(0, 100)
-            .map((s: { id: string }) => s.id);
         }
         case 'cryptocom': {
           const res = await fetch('https://api.crypto.com/exchange/v1/public/get-instruments');
@@ -95,7 +87,6 @@ export function useCryptoScanner() {
 
   const fetchKlines = async (exchange: Exchange, symbol: string, timeframe: Timeframe): Promise<number[][] | null> => {
     const bybitIntervals: Record<Timeframe, string> = { '15m': '15', '30m': '30', '4h': '240', '12h': '720', '1d': 'D' };
-    const gateioIntervals: Record<Timeframe, string> = { '15m': '15m', '30m': '30m', '4h': '4h', '12h': '12h', '1d': '1d' };
     
     try {
       switch (exchange) {
@@ -134,18 +125,6 @@ export function useCryptoScanner() {
             parseFloat(d[2]),
             parseFloat(d[5])
           ]) || null;
-        }
-        case 'gateio': {
-          const res = await fetch(`https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=${symbol}&interval=${gateioIntervals[timeframe]}&limit=100`);
-          const data = await res.json();
-          return data.map((d: string[]) => [
-            parseFloat(d[0]) * 1000,
-            parseFloat(d[5]),
-            parseFloat(d[3]),
-            parseFloat(d[4]),
-            parseFloat(d[2]),
-            parseFloat(d[6])
-          ]);
         }
         case 'cryptocom': {
           const interval = timeframe === '15m' ? '15m' : timeframe === '30m' ? '30m' : timeframe === '4h' ? '4h' : timeframe === '12h' ? '12h' : '1D';
@@ -231,8 +210,6 @@ export function useCryptoScanner() {
       formattedSymbol = symbol.replace('USDT', '/USDT');
     } else if (exchange === 'kucoin') {
       formattedSymbol = symbol.replace('-', '/');
-    } else if (exchange === 'gateio') {
-      formattedSymbol = symbol.replace('_', '/');
     } else if (exchange === 'cryptocom') {
       formattedSymbol = symbol.replace('_', '/');
     } else if (exchange === 'coingecko' || exchange === 'coinmarketcap') {
@@ -276,7 +253,21 @@ export function useCryptoScanner() {
 
   const sortPairs = useCallback((pairsToSort: CryptoPair[], sortBy: SortBy): CryptoPair[] => {
     const sorted = [...pairsToSort];
+    
+    // Calculate combined score: average of RSI and StochRSI
+    const getCombinedScore = (pair: CryptoPair) => {
+      const rsi = pair.rsi ?? 50;
+      const stochRsi = pair.stochRsi ?? 50;
+      return (rsi + stochRsi) / 2;
+    };
+    
     switch (sortBy) {
+      case 'combined_buy':
+        // Best buy = lowest combined score (oversold)
+        return sorted.sort((a, b) => getCombinedScore(a) - getCombinedScore(b));
+      case 'combined_sell':
+        // Best sell = highest combined score (overbought)
+        return sorted.sort((a, b) => getCombinedScore(b) - getCombinedScore(a));
       case 'stochrsi_desc':
         return sorted.sort((a, b) => (b.stochRsi || 0) - (a.stochRsi || 0));
       case 'stochrsi_asc':
