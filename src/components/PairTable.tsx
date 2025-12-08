@@ -21,13 +21,21 @@ function getStochRsiColor(stochRsi: number | null): string {
   return 'text-muted-foreground';
 }
 
-function getCombinedScore(rsi: number | null, stochRsi: number | null): number {
-  const r = rsi ?? 50;
-  const s = stochRsi ?? 50;
-  return (r + s) / 2;
+function getMfiColor(mfi: number | null): string {
+  if (mfi === null) return 'text-muted-foreground';
+  if (mfi > 80) return 'text-destructive font-bold';
+  if (mfi < 20) return 'text-success font-bold';
+  return 'text-muted-foreground';
 }
 
-function getCombinedColor(score: number): string {
+function getAvgScore(rsi: number | null, stochRsi: number | null, mfi: number | null): number {
+  const r = rsi ?? 50;
+  const s = stochRsi ?? 50;
+  const m = mfi ?? 50;
+  return (r + s + m) / 3;
+}
+
+function getAvgColor(score: number): string {
   if (score < 25) return 'text-success font-bold';
   if (score < 35) return 'text-success';
   if (score > 75) return 'text-destructive font-bold';
@@ -45,14 +53,15 @@ export function PairTable({ pairs, exchange, loading }: PairTableProps) {
               <th className="px-6 py-4 text-left font-medium sticky left-0 bg-card z-20 min-w-[140px]">Pair</th>
               <th className="px-6 py-4 text-right font-medium min-w-[120px]">Price</th>
               <th className="px-6 py-4 text-center font-medium min-w-[100px]">RSI (14)</th>
-              <th className="px-6 py-4 text-center font-medium min-w-[120px]">StochRSI (14)</th>
-              <th className="px-6 py-4 text-center font-medium min-w-[100px]">Combined</th>
+              <th className="px-6 py-4 text-center font-medium min-w-[100px]">SRSI (14)</th>
+              <th className="px-6 py-4 text-center font-medium min-w-[100px]">MFI (14)</th>
+              <th className="px-6 py-4 text-center font-medium min-w-[100px]">AVG</th>
               <th className="px-6 py-4 text-right font-medium min-w-[100px]">Volume</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {pairs.map((pair, index) => {
-              const combined = getCombinedScore(pair.rsi, pair.stochRsi);
+              const avg = getAvgScore(pair.rsi, pair.stochRsi, pair.mfi);
               return (
                 <tr 
                   key={pair.symbol} 
@@ -83,8 +92,13 @@ export function PairTable({ pairs, exchange, loading }: PairTableProps) {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <span className={getCombinedColor(combined)}>
-                      {combined.toFixed(1)}
+                    <span className={getMfiColor(pair.mfi)}>
+                      {pair.mfi?.toFixed(1) || '-'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    <span className={getAvgColor(avg)}>
+                      {avg.toFixed(1)}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right text-muted-foreground font-mono">

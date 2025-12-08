@@ -14,7 +14,7 @@ export const exchanges: ExchangeInfo[] = [
   { id: 'cryptocom', name: 'Crypto.com', logo: 'https://cryptologos.cc/logos/cronos-cro-logo.png', hoverColor: 'hover:bg-blue-700' },
   { id: 'coinmarketcap', name: 'CoinMarketCap', logo: 'https://coinmarketcap.com/apple-touch-icon.png', hoverColor: 'hover:bg-blue-500' },
   { id: 'coingecko', name: 'CoinGecko', logo: 'https://static.coingecko.com/s/coingecko-logo-8903d34ce19ca4be1c81f0db30e924154750d208683fad7ae6f2ce06c76d0a56.png', hoverColor: 'hover:bg-green-500' },
-  { id: 'deriv', name: 'Deriv Synthetic Indices', logo: 'https://deriv.com/static/1b57a116945933314571111b1.png', hoverColor: 'hover:bg-red-600' },
+  { id: 'deriv', name: 'Deriv Synthetic Indices', logo: 'https://deriv.com/favicon.ico', hoverColor: 'hover:bg-red-600' },
 ];
 
 export type Timeframe = '15m' | '30m' | '4h' | '12h' | '1d';
@@ -25,6 +25,7 @@ export interface CryptoPair {
   volume: number;
   rsi: number | null;
   stochRsi: number | null;
+  mfi: number | null;
 }
 
 export function calculateRSI(closes: number[], period = 14): number | null {
@@ -82,6 +83,37 @@ export function calculateStochRSI(closes: number[], rsiPeriod = 14, stochPeriod 
   
   // StochRSI = (RSI - min(RSI)) / (max(RSI) - min(RSI)) * 100
   return ((currentRsi - minRsi) / (maxRsi - minRsi)) * 100;
+}
+
+export function calculateMFI(highs: number[], lows: number[], closes: number[], volumes: number[], period = 14): number | null {
+  if (closes.length < period + 1) return null;
+  
+  const typicalPrices: number[] = [];
+  for (let i = 0; i < closes.length; i++) {
+    typicalPrices.push((highs[i] + lows[i] + closes[i]) / 3);
+  }
+  
+  const rawMoneyFlows: number[] = [];
+  for (let i = 0; i < typicalPrices.length; i++) {
+    rawMoneyFlows.push(typicalPrices[i] * volumes[i]);
+  }
+  
+  let positiveFlow = 0;
+  let negativeFlow = 0;
+  
+  for (let i = closes.length - period; i < closes.length; i++) {
+    if (i > 0) {
+      if (typicalPrices[i] > typicalPrices[i - 1]) {
+        positiveFlow += rawMoneyFlows[i];
+      } else if (typicalPrices[i] < typicalPrices[i - 1]) {
+        negativeFlow += rawMoneyFlows[i];
+      }
+    }
+  }
+  
+  if (negativeFlow === 0) return 100;
+  const moneyRatio = positiveFlow / negativeFlow;
+  return 100 - (100 / (1 + moneyRatio));
 }
 
 export function formatPrice(p: number): string {
