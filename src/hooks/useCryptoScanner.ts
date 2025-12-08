@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
-import { Exchange, Timeframe, CryptoPair, calculateRSI, calculateStochRSI } from '@/lib/exchanges';
+import { Exchange, Timeframe, CryptoPair, calculateRSI, calculateStochRSI, calculateMFI } from '@/lib/exchanges';
 
-export type SortBy = 'combined_buy' | 'combined_sell' | 'stochrsi_desc' | 'stochrsi_asc' | 'rsi_desc' | 'rsi_asc' | 'volume_desc';
+export type SortBy = 'avg_buy' | 'avg_sell' | 'stochrsi_desc' | 'stochrsi_asc' | 'rsi_desc' | 'rsi_asc' | 'mfi_desc' | 'mfi_asc' | 'volume_desc';
 
 const COINGECKO_API_KEY = 'CG-E4WeSxWKJURBJTrS4bo9Jeoc';
 const COINMARKETCAP_API_KEY = '056e3756b6204df1b6f60d0ec47044cc';
@@ -280,11 +280,14 @@ export function useCryptoScanner() {
     const klines = await fetchKlines(exchange, symbol, timeframe);
     if (!klines || klines.length < 50) return null;
 
+    const highs = klines.map(k => k[2]);
+    const lows = klines.map(k => k[3]);
     const closes = klines.map(k => k[4]);
     const volumes = klines.map(k => k[5]);
 
     const rsi = calculateRSI(closes, 14);
     const stochRsi = calculateStochRSI(closes, 14, 14);
+    const mfi = calculateMFI(highs, lows, closes, volumes, 14);
     const latest = klines[klines.length - 1];
 
     let formattedSymbol = symbol;
@@ -306,7 +309,8 @@ export function useCryptoScanner() {
       price: latest[4],
       volume: volumes.reduce((a, b) => a + b, 0) / volumes.length,
       rsi,
-      stochRsi
+      stochRsi,
+      mfi
     };
   };
 
@@ -339,20 +343,21 @@ export function useCryptoScanner() {
   const sortPairs = useCallback((pairsToSort: CryptoPair[], sortBy: SortBy): CryptoPair[] => {
     const sorted = [...pairsToSort];
     
-    // Calculate combined score: average of RSI and StochRSI
-    const getCombinedScore = (pair: CryptoPair) => {
+    // Calculate average score: average of RSI, StochRSI, and MFI
+    const getAvgScore = (pair: CryptoPair) => {
       const rsi = pair.rsi ?? 50;
       const stochRsi = pair.stochRsi ?? 50;
-      return (rsi + stochRsi) / 2;
+      const mfi = pair.mfi ?? 50;
+      return (rsi + stochRsi + mfi) / 3;
     };
     
     switch (sortBy) {
-      case 'combined_buy':
-        // Best buy = lowest combined score (oversold)
-        return sorted.sort((a, b) => getCombinedScore(a) - getCombinedScore(b));
-      case 'combined_sell':
-        // Best sell = highest combined score (overbought)
-        return sorted.sort((a, b) => getCombinedScore(b) - getCombinedScore(a));
+      case 'avg_buy':
+        // Best buy = lowest avg score (oversold)
+        return sorted.sort((a, b) => getAvgScore(a) - getAvgScore(b));
+      case 'avg_sell':
+        // Best sell = highest avg score (overbought)
+        return sorted.sort((a, b) => getAvgScore(b) - getAvgScore(a));
       case 'stochrsi_desc':
         return sorted.sort((a, b) => (b.stochRsi || 0) - (a.stochRsi || 0));
       case 'stochrsi_asc':
@@ -361,6 +366,10 @@ export function useCryptoScanner() {
         return sorted.sort((a, b) => (b.rsi || 0) - (a.rsi || 0));
       case 'rsi_asc':
         return sorted.sort((a, b) => (a.rsi || 0) - (b.rsi || 0));
+      case 'mfi_desc':
+        return sorted.sort((a, b) => (b.mfi || 0) - (a.mfi || 0));
+      case 'mfi_asc':
+        return sorted.sort((a, b) => (a.mfi || 0) - (b.mfi || 0));
       case 'volume_desc':
         return sorted.sort((a, b) => b.volume - a.volume);
       default:
