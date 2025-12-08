@@ -1,4 +1,4 @@
-export type Exchange = 'binance' | 'bybit' | 'kucoin' | 'cryptocom' | 'gateio' | 'coinmarketcap' | 'coingecko';
+export type Exchange = 'binance' | 'bybit' | 'kucoin' | 'cryptocom' | 'coinmarketcap' | 'coingecko';
 
 export interface ExchangeInfo {
   id: Exchange;
@@ -12,7 +12,6 @@ export const exchanges: ExchangeInfo[] = [
   { id: 'bybit', name: 'Bybit', logo: 'https://assets.coingecko.com/markets/images/698/large/bybit_spot.png', hoverColor: 'hover:bg-orange-600' },
   { id: 'kucoin', name: 'KuCoin', logo: 'https://cryptologos.cc/logos/kucoin-token-kcs-logo.png', hoverColor: 'hover:bg-green-600' },
   { id: 'cryptocom', name: 'Crypto.com', logo: 'https://cryptologos.cc/logos/cronos-cro-logo.png', hoverColor: 'hover:bg-blue-700' },
-  { id: 'gateio', name: 'Gate.io', logo: 'https://assets.coingecko.com/markets/images/60/large/gate_io_logo1.png', hoverColor: 'hover:bg-red-600' },
   { id: 'coinmarketcap', name: 'CoinMarketCap', logo: 'https://coinmarketcap.com/apple-touch-icon.png', hoverColor: 'hover:bg-blue-500' },
   { id: 'coingecko', name: 'CoinGecko', logo: 'https://static.coingecko.com/s/coingecko-logo-8903d34ce19ca4be1c81f0db30e924154750d208683fad7ae6f2ce06c76d0a56.png', hoverColor: 'hover:bg-green-500' },
 ];
@@ -101,7 +100,6 @@ export function getTradingUrl(exchange: Exchange, symbol: string): string {
     bybit: 'https://www.bybit.com/en/trade/spot/',
     kucoin: 'https://www.kucoin.com/trade/',
     cryptocom: 'https://crypto.com/exchange/trade/',
-    gateio: 'https://www.gate.io/trade/',
     coinmarketcap: 'https://coinmarketcap.com/currencies/',
     coingecko: 'https://www.coingecko.com/en/coins/'
   };
