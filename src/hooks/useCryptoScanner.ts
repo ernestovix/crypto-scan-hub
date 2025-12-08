@@ -5,6 +5,35 @@ export type SortBy = 'combined_buy' | 'combined_sell' | 'stochrsi_desc' | 'stoch
 
 const COINGECKO_API_KEY = 'CG-E4WeSxWKJURBJTrS4bo9Jeoc';
 const COINMARKETCAP_API_KEY = '056e3756b6204df1b6f60d0ec47044cc';
+const DERIV_API_TOKEN = 'FDJ3Gj7c1Y2Ikj7';
+
+// Deriv Synthetic Indices symbols
+const DERIV_SYNTHETIC_INDICES = [
+  { symbol: 'R_10', name: 'Volatility 10 Index' },
+  { symbol: 'R_25', name: 'Volatility 25 Index' },
+  { symbol: 'R_50', name: 'Volatility 50 Index' },
+  { symbol: 'R_75', name: 'Volatility 75 Index' },
+  { symbol: 'R_100', name: 'Volatility 100 Index' },
+  { symbol: '1HZ10V', name: 'Volatility 10 (1s) Index' },
+  { symbol: '1HZ25V', name: 'Volatility 25 (1s) Index' },
+  { symbol: '1HZ50V', name: 'Volatility 50 (1s) Index' },
+  { symbol: '1HZ75V', name: 'Volatility 75 (1s) Index' },
+  { symbol: '1HZ100V', name: 'Volatility 100 (1s) Index' },
+  { symbol: 'BOOM300N', name: 'Boom 300 Index' },
+  { symbol: 'BOOM500', name: 'Boom 500 Index' },
+  { symbol: 'BOOM1000', name: 'Boom 1000 Index' },
+  { symbol: 'CRASH300N', name: 'Crash 300 Index' },
+  { symbol: 'CRASH500', name: 'Crash 500 Index' },
+  { symbol: 'CRASH1000', name: 'Crash 1000 Index' },
+  { symbol: 'JD10', name: 'Jump 10 Index' },
+  { symbol: 'JD25', name: 'Jump 25 Index' },
+  { symbol: 'JD50', name: 'Jump 50 Index' },
+  { symbol: 'JD75', name: 'Jump 75 Index' },
+  { symbol: 'JD100', name: 'Jump 100 Index' },
+  { symbol: 'stpRNG', name: 'Step Index' },
+  { symbol: 'RDBEAR', name: 'Bear Market Index' },
+  { symbol: 'RDBULL', name: 'Bull Market Index' },
+];
 
 export function useCryptoScanner() {
   const [pairs, setPairs] = useState<CryptoPair[]>([]);
@@ -75,6 +104,9 @@ export function useCryptoScanner() {
           }
           console.error('CoinMarketCap API error:', data);
           return [];
+        }
+        case 'deriv': {
+          return DERIV_SYNTHETIC_INDICES.map(s => s.symbol);
         }
         default:
           return [];
@@ -186,6 +218,56 @@ export function useCryptoScanner() {
           }
           return null;
         }
+        case 'deriv': {
+          // Use Deriv WebSocket API for ticks/candles
+          const granularity = timeframe === '15m' ? 900 : timeframe === '30m' ? 1800 : timeframe === '4h' ? 14400 : timeframe === '12h' ? 43200 : 86400;
+          
+          return new Promise((resolve) => {
+            const ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089');
+            
+            ws.onopen = () => {
+              ws.send(JSON.stringify({
+                ticks_history: symbol,
+                adjust_start_time: 1,
+                count: 100,
+                end: 'latest',
+                granularity: granularity,
+                style: 'candles'
+              }));
+            };
+            
+            ws.onmessage = (msg) => {
+              const data = JSON.parse(msg.data);
+              if (data.candles) {
+                const klines = data.candles.map((c: { epoch: number; open: number; high: number; low: number; close: number }) => [
+                  c.epoch * 1000,
+                  c.open,
+                  c.high,
+                  c.low,
+                  c.close,
+                  0 // Deriv doesn't provide volume for synthetic indices
+                ]);
+                ws.close();
+                resolve(klines);
+              } else if (data.error) {
+                console.error('Deriv API error:', data.error);
+                ws.close();
+                resolve(null);
+              }
+            };
+            
+            ws.onerror = () => {
+              ws.close();
+              resolve(null);
+            };
+            
+            // Timeout after 10 seconds
+            setTimeout(() => {
+              ws.close();
+              resolve(null);
+            }, 10000);
+          });
+        }
         default:
           return null;
       }
@@ -214,6 +296,9 @@ export function useCryptoScanner() {
       formattedSymbol = symbol.replace('_', '/');
     } else if (exchange === 'coingecko' || exchange === 'coinmarketcap') {
       formattedSymbol = symbol.toUpperCase() + '/USD';
+    } else if (exchange === 'deriv') {
+      const derivIndex = DERIV_SYNTHETIC_INDICES.find(s => s.symbol === symbol);
+      formattedSymbol = derivIndex?.name || symbol;
     }
 
     return {
