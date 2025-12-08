@@ -1,4 +1,4 @@
-export type Exchange = 'binance' | 'bybit' | 'kucoin' | 'cryptocom' | 'coinmarketcap' | 'coingecko';
+export type Exchange = 'binance' | 'bybit' | 'kucoin' | 'cryptocom' | 'coinmarketcap' | 'coingecko' | 'deriv';
 
 export interface ExchangeInfo {
   id: Exchange;
@@ -14,6 +14,7 @@ export const exchanges: ExchangeInfo[] = [
   { id: 'cryptocom', name: 'Crypto.com', logo: 'https://cryptologos.cc/logos/cronos-cro-logo.png', hoverColor: 'hover:bg-blue-700' },
   { id: 'coinmarketcap', name: 'CoinMarketCap', logo: 'https://coinmarketcap.com/apple-touch-icon.png', hoverColor: 'hover:bg-blue-500' },
   { id: 'coingecko', name: 'CoinGecko', logo: 'https://static.coingecko.com/s/coingecko-logo-8903d34ce19ca4be1c81f0db30e924154750d208683fad7ae6f2ce06c76d0a56.png', hoverColor: 'hover:bg-green-500' },
+  { id: 'deriv', name: 'Deriv Synthetic Indices', logo: 'https://deriv.com/static/1b57a116945933314571111b1.png', hoverColor: 'hover:bg-red-600' },
 ];
 
 export type Timeframe = '15m' | '30m' | '4h' | '12h' | '1d';
@@ -101,13 +102,18 @@ export function getTradingUrl(exchange: Exchange, symbol: string): string {
     kucoin: 'https://www.kucoin.com/trade/',
     cryptocom: 'https://crypto.com/exchange/trade/',
     coinmarketcap: 'https://coinmarketcap.com/currencies/',
-    coingecko: 'https://www.coingecko.com/en/coins/'
+    coingecko: 'https://www.coingecko.com/en/coins/',
+    deriv: 'https://deriv.com/dtrader'
   };
   
   const cleanSymbol = symbol.replace('/', '_').replace('/USDT', '').replace('_USDT', '').toLowerCase();
   
   if (exchange === 'coinmarketcap' || exchange === 'coingecko') {
     return base[exchange] + cleanSymbol;
+  }
+  
+  if (exchange === 'deriv') {
+    return base[exchange];
   }
   
   return base[exchange] + symbol.replace('/', '_');
