@@ -5,6 +5,7 @@ interface PairTableProps {
   pairs: CryptoPair[];
   exchange: Exchange;
   loading: boolean;
+  onPairClick?: (pair: CryptoPair) => void;
 }
 
 function getRsiColor(rsi: number | null): string {
@@ -43,7 +44,7 @@ function getAvgColor(score: number): string {
   return 'text-warning';
 }
 
-export function PairTable({ pairs, exchange, loading }: PairTableProps) {
+export function PairTable({ pairs, exchange, loading, onPairClick }: PairTableProps) {
   return (
     <div className="relative">
       <div className="overflow-x-auto">
@@ -65,18 +66,14 @@ export function PairTable({ pairs, exchange, loading }: PairTableProps) {
               return (
                 <tr 
                   key={pair.symbol} 
-                  className="hover:bg-card/50 transition-colors animate-fade-in"
+                  className="hover:bg-card/50 transition-colors animate-fade-in cursor-pointer"
                   style={{ animationDelay: `${index * 20}ms` }}
+                  onClick={() => onPairClick?.(pair)}
                 >
                   <td className="px-6 py-4 font-medium sticky left-0 bg-background z-10">
-                    <a 
-                      href={getTradingUrl(exchange, pair.symbol)} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-primary hover:text-accent hover:underline transition-colors"
-                    >
+                    <span className="text-primary hover:text-accent hover:underline transition-colors">
                       {pair.symbol}
-                    </a>
+                    </span>
                   </td>
                   <td className="px-6 py-4 text-right text-foreground font-mono">
                     ${formatPrice(pair.price)}
