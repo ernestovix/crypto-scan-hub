@@ -14,9 +14,9 @@ export const exchanges: ExchangeInfo[] = [
   { id: 'cryptocom', name: 'Crypto.com', logo: 'https://cryptologos.cc/logos/cronos-cro-logo.png', hoverColor: 'hover:bg-blue-700' },
   { id: 'coinmarketcap', name: 'CoinMarketCap', logo: 'https://coinmarketcap.com/apple-touch-icon.png', hoverColor: 'hover:bg-blue-500' },
   { id: 'coingecko', name: 'CoinGecko', logo: 'https://static.coingecko.com/s/coingecko-logo-8903d34ce19ca4be1c81f0db30e924154750d208683fad7ae6f2ce06c76d0a56.png', hoverColor: 'hover:bg-green-500' },
-  { id: 'deriv', name: 'Deriv Synthetic Indices', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Deriv.com_official_logo.png/220px-Deriv.com_official_logo.png', hoverColor: 'hover:bg-red-600' },
-  { id: 'spotspecials', name: 'Spot Specials', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Dollar_sign_in_circle.svg/240px-Dollar_sign_in_circle.svg.png', hoverColor: 'hover:bg-emerald-600' },
-  { id: 'leveragespecials', name: 'Leverage Special', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Pound_sign.svg/240px-Pound_sign.svg.png', hoverColor: 'hover:bg-purple-600' },
+  { id: 'deriv', name: 'Deriv Synthetic Indices', logo: 'https://deriv.com/static/1b57a116945933314571e0e5e54ab0d5/9dcb6/deriv.webp', hoverColor: 'hover:bg-red-600' },
+  { id: 'spotspecials', name: 'Spot Specials', logo: 'https://img.icons8.com/color/96/us-dollar-circled.png', hoverColor: 'hover:bg-emerald-600' },
+  { id: 'leveragespecials', name: 'Leverage Special', logo: 'https://img.icons8.com/color/96/pound-sterling.png', hoverColor: 'hover:bg-purple-600' },
 ];
 
 export type Timeframe = '1m' | '5m' | '15m' | '30m' | '4h' | '12h' | '1d';
