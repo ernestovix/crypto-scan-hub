@@ -1,4 +1,4 @@
-export type Exchange = 'binance' | 'bybit' | 'kucoin' | 'cryptocom' | 'coinmarketcap' | 'coingecko' | 'deriv';
+export type Exchange = 'binance' | 'bybit' | 'kucoin' | 'cryptocom' | 'coinmarketcap' | 'coingecko' | 'deriv' | 'spotspecials' | 'leveragespecials';
 
 export interface ExchangeInfo {
   id: Exchange;
@@ -14,10 +14,12 @@ export const exchanges: ExchangeInfo[] = [
   { id: 'cryptocom', name: 'Crypto.com', logo: 'https://cryptologos.cc/logos/cronos-cro-logo.png', hoverColor: 'hover:bg-blue-700' },
   { id: 'coinmarketcap', name: 'CoinMarketCap', logo: 'https://coinmarketcap.com/apple-touch-icon.png', hoverColor: 'hover:bg-blue-500' },
   { id: 'coingecko', name: 'CoinGecko', logo: 'https://static.coingecko.com/s/coingecko-logo-8903d34ce19ca4be1c81f0db30e924154750d208683fad7ae6f2ce06c76d0a56.png', hoverColor: 'hover:bg-green-500' },
-  { id: 'deriv', name: 'Deriv Synthetic Indices', logo: 'https://deriv.com/favicon.ico', hoverColor: 'hover:bg-red-600' },
+  { id: 'deriv', name: 'Deriv Synthetic Indices', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Deriv.com_official_logo.png/220px-Deriv.com_official_logo.png', hoverColor: 'hover:bg-red-600' },
+  { id: 'spotspecials', name: 'Spot Specials', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Dollar_sign_in_circle.svg/240px-Dollar_sign_in_circle.svg.png', hoverColor: 'hover:bg-emerald-600' },
+  { id: 'leveragespecials', name: 'Leverage Special', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Pound_sign.svg/240px-Pound_sign.svg.png', hoverColor: 'hover:bg-purple-600' },
 ];
 
-export type Timeframe = '15m' | '30m' | '4h' | '12h' | '1d';
+export type Timeframe = '1m' | '5m' | '15m' | '30m' | '4h' | '12h' | '1d';
 
 export interface CryptoPair {
   symbol: string;
@@ -135,7 +137,9 @@ export function getTradingUrl(exchange: Exchange, symbol: string): string {
     cryptocom: 'https://crypto.com/exchange/trade/',
     coinmarketcap: 'https://coinmarketcap.com/currencies/',
     coingecko: 'https://www.coingecko.com/en/coins/',
-    deriv: 'https://deriv.com/dtrader'
+    deriv: 'https://deriv.com/dtrader',
+    spotspecials: 'https://www.binance.com/en/trade/',
+    leveragespecials: 'https://www.bybit.com/en/trade/spot/'
   };
   
   const cleanSymbol = symbol.replace('/', '_').replace('/USDT', '').replace('_USDT', '').toLowerCase();
@@ -150,3 +154,107 @@ export function getTradingUrl(exchange: Exchange, symbol: string): string {
   
   return base[exchange] + symbol.replace('/', '_');
 }
+
+// Special pairs lists
+export const spotSpecialPairs = [
+  "BTC/USDT",
+  "ETH/USDT",
+  "XRP/USDT",
+  "SOL/USDT",
+  "XLM/USDT",
+  "BNB/USDT",
+  "DOGE/USDT"
+];
+
+export const leverageSpecialPairs = [
+  "PEPE/USDT",
+  "SUI/USDT",
+  "FARTCOIN/USDT",
+  "PIEVERSE/USDT",
+  "AVAX/USDT",
+  "LINK/USDT",
+  "ADA/USDT",
+  "WLD/USDT",
+  "LTC/USDT",
+  "HYPE/USDT",
+  "ENA/USDT",
+  "H/USDT",
+  "WIF/USDT",
+  "NEAR/USDT",
+  "BCH/USDT",
+  "UNI/USDT",
+  "GALA/USDT",
+  "WLFI/USDT",
+  "ASTER/USDT",
+  "AAVE/USDT",
+  "PENGU/USDT",
+  "TRUMP/USDT",
+  "MON/USDT",
+  "DOT/USDT",
+  "FIL/USDT",
+  "ARB/USDT",
+  "FET/USDT",
+  "LDO/USDT",
+  "PUMP/USDT",
+  "ICP/USDT",
+  "CRV/USDT",
+  "SHIB/USDT",
+  "TRX/USDT",
+  "OP/USDT",
+  "VIRTUAL/USDT",
+  "RESOLV/USDT",
+  "TON/USDT",
+  "CFX/USDT",
+  "APE/USDT",
+  "PNUT/USDT",
+  "ONDO/USDT",
+  "HBAR/USDT",
+  "EIGEN/USDT",
+  "STRK/USDT",
+  "PEOPLE/USDT",
+  "ORDI/USDT",
+  "TIA/USDT",
+  "MOODENG/USDT",
+  "TURBO/USDT",
+  "SEI/USDT",
+  "KAS/USDT",
+  "ETHFI/USDT",
+  "DYDX/USDT",
+  "AR/USDT",
+  "TRB/USDT",
+  "POL/USDT",
+  "ATOM/USDT",
+  "IP/USDT",
+  "SPX/USDT",
+  "CAKE/USDT",
+  "COAI/USDT",
+  "CRO/USDT",
+  "OM/USDT",
+  "POPCAT/USDT",
+  "SUSHI/USDT",
+  "BOME/USDT",
+  "SAND/USDT",
+  "VINE/USDT",
+  "LPT/USDT",
+  "HUMA/USDT",
+  "KAITO/USDT",
+  "SOON/USDT",
+  "BSV/USDT",
+  "KAIA/USDT",
+  "AXS/USDT",
+  "GOAT/USDT",
+  "THETA/USDT",
+  "FLOCK/USDT",
+  "WCT/USDT",
+  "ANIME/USDT",
+  "ZBCN/USDT",
+  "SYRUP/USDT",
+  "JCT/USDT",
+  "SPK/USDT",
+  "CETUS/USDT",
+  "USUAL/USDT",
+  "XPIN/USDT",
+  "KERNEL/USDT",
+  "TOSHI/USDT",
+  "COOKIE/USDT"
+];

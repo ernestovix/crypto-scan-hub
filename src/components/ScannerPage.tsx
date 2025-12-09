@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Exchange, Timeframe, exchanges } from '@/lib/exchanges';
+import { Exchange, Timeframe, CryptoPair, exchanges } from '@/lib/exchanges';
 import { useCryptoScanner, SortBy } from '@/hooks/useCryptoScanner';
 import { ScannerControls } from './ScannerControls';
 import { PairTable } from './PairTable';
+import { PairDetailPage } from './PairDetailPage';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 
 interface ScannerPageProps {
@@ -11,26 +12,38 @@ interface ScannerPageProps {
 }
 
 export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
-  const [timeframe, setTimeframe] = useState<Timeframe>('4h');
-  const [sortBy, setSortBy] = useState<SortBy>('stochrsi_desc');
+  const [sortBy, setSortBy] = useState<SortBy>('avg_buy'); // Default to Avg ↑
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPair, setSelectedPair] = useState<CryptoPair | null>(null);
 
   const { pairs, loading, progress, loadData, sortPairs, filterPairs } = useCryptoScanner();
 
   const exchangeInfo = exchanges.find(e => e.id === exchange);
 
   useEffect(() => {
-    loadData(exchange, timeframe);
-  }, [exchange, timeframe, loadData]);
+    // Always use 4h as default timeframe
+    loadData(exchange, '4h');
+  }, [exchange, loadData]);
 
   const filteredAndSortedPairs = useMemo(() => {
     const filtered = filterPairs(pairs, searchQuery);
     return sortPairs(filtered, sortBy);
   }, [pairs, searchQuery, sortBy, filterPairs, sortPairs]);
 
-  const handleTimeframeChange = (value: Timeframe) => {
-    setTimeframe(value);
+  const handlePairClick = (pair: CryptoPair) => {
+    setSelectedPair(pair);
   };
+
+  // Show pair detail page if a pair is selected
+  if (selectedPair) {
+    return (
+      <PairDetailPage 
+        pair={selectedPair} 
+        exchange={exchange} 
+        onBack={() => setSelectedPair(null)} 
+      />
+    );
+  }
 
   return (
     <div className="flex-1 bg-background min-h-screen">
@@ -66,13 +79,11 @@ export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
         </div>
       </div>
 
-      {/* Controls */}
+      {/* Controls - No timeframe selector */}
       <ScannerControls
-        timeframe={timeframe}
         sortBy={sortBy}
         searchQuery={searchQuery}
         pairs={pairs}
-        onTimeframeChange={handleTimeframeChange}
         onSortChange={setSortBy}
         onSearchChange={setSearchQuery}
       />
@@ -90,7 +101,12 @@ export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
       )}
 
       {/* Table */}
-      <PairTable pairs={filteredAndSortedPairs} exchange={exchange} loading={loading} />
+      <PairTable 
+        pairs={filteredAndSortedPairs} 
+        exchange={exchange} 
+        loading={loading}
+        onPairClick={handlePairClick}
+      />
     </div>
   );
 }

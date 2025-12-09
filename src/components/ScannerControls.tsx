@@ -1,24 +1,20 @@
 import { useState, useRef, useEffect } from 'react';
-import { Timeframe, CryptoPair } from '@/lib/exchanges';
+import { CryptoPair } from '@/lib/exchanges';
 import { SortBy } from '@/hooks/useCryptoScanner';
 import { Search, X } from 'lucide-react';
 
 interface ScannerControlsProps {
-  timeframe: Timeframe;
   sortBy: SortBy;
   searchQuery: string;
   pairs: CryptoPair[];
-  onTimeframeChange: (value: Timeframe) => void;
   onSortChange: (value: SortBy) => void;
   onSearchChange: (value: string) => void;
 }
 
 export function ScannerControls({
-  timeframe,
   sortBy,
   searchQuery,
   pairs,
-  onTimeframeChange,
   onSortChange,
   onSearchChange
 }: ScannerControlsProps) {
@@ -42,22 +38,7 @@ export function ScannerControls({
 
   return (
     <div className="bg-card p-6 border-b border-border">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-2 text-muted-foreground">Timeframe</label>
-          <select
-            value={timeframe}
-            onChange={(e) => onTimeframeChange(e.target.value as Timeframe)}
-            className="w-full bg-secondary border border-border rounded-lg px-4 py-3 text-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all"
-          >
-            <option value="4h">4 Hours (Default)</option>
-            <option value="1d">1 Day</option>
-            <option value="12h">12 Hours</option>
-            <option value="30m">30 Minutes</option>
-            <option value="15m">15 Minutes</option>
-          </select>
-        </div>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-2 text-muted-foreground">Sort By</label>
           <select
@@ -65,8 +46,8 @@ export function ScannerControls({
             onChange={(e) => onSortChange(e.target.value as SortBy)}
             className="w-full bg-secondary border border-border rounded-lg px-4 py-3 text-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all"
           >
-            <option value="avg_buy">🟢 Strong Buy (AVG)</option>
-            <option value="avg_sell">🔴 Strong Sell (AVG)</option>
+            <option value="avg_buy">🟢 Avg ↑ (Strong Buy)</option>
+            <option value="avg_sell">🔴 Avg ↓ (Strong Sell)</option>
             <option value="stochrsi_desc">SRSI ↓ (Highest)</option>
             <option value="stochrsi_asc">SRSI ↑ (Lowest)</option>
             <option value="rsi_desc">RSI ↓ (Highest)</option>

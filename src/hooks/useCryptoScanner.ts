@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Exchange, Timeframe, CryptoPair, calculateRSI, calculateStochRSI, calculateMFI } from '@/lib/exchanges';
+import { Exchange, Timeframe, CryptoPair, calculateRSI, calculateStochRSI, calculateMFI, spotSpecialPairs, leverageSpecialPairs } from '@/lib/exchanges';
 
 export type SortBy = 'avg_buy' | 'avg_sell' | 'stochrsi_desc' | 'stochrsi_asc' | 'rsi_desc' | 'rsi_asc' | 'mfi_desc' | 'mfi_asc' | 'volume_desc';
 
@@ -108,6 +108,14 @@ export function useCryptoScanner() {
         case 'deriv': {
           return DERIV_SYNTHETIC_INDICES.map(s => s.symbol);
         }
+        case 'spotspecials': {
+          // Return Binance-formatted symbols for spot specials
+          return spotSpecialPairs.map(p => p.replace('/', ''));
+        }
+        case 'leveragespecials': {
+          // Return Bybit-formatted symbols for leverage specials
+          return leverageSpecialPairs.map(p => p.replace('/', ''));
+        }
         default:
           return [];
       }
@@ -118,10 +126,13 @@ export function useCryptoScanner() {
   };
 
   const fetchKlines = async (exchange: Exchange, symbol: string, timeframe: Timeframe): Promise<number[][] | null> => {
-    const bybitIntervals: Record<Timeframe, string> = { '15m': '15', '30m': '30', '4h': '240', '12h': '720', '1d': 'D' };
+    const bybitIntervals: Record<Timeframe, string> = { '1m': '1', '5m': '5', '15m': '15', '30m': '30', '4h': '240', '12h': '720', '1d': 'D' };
     
     try {
-      switch (exchange) {
+      // Map special exchanges to their data sources
+      const effectiveExchange = exchange === 'spotspecials' ? 'binance' : exchange === 'leveragespecials' ? 'bybit' : exchange;
+      
+      switch (effectiveExchange) {
         case 'binance': {
           const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${timeframe}&limit=100`);
           const data = await res.json();
@@ -220,7 +231,7 @@ export function useCryptoScanner() {
         }
         case 'deriv': {
           // Use Deriv WebSocket API for ticks/candles
-          const granularity = timeframe === '15m' ? 900 : timeframe === '30m' ? 1800 : timeframe === '4h' ? 14400 : timeframe === '12h' ? 43200 : 86400;
+          const granularity = timeframe === '1m' ? 60 : timeframe === '5m' ? 300 : timeframe === '15m' ? 900 : timeframe === '30m' ? 1800 : timeframe === '4h' ? 14400 : timeframe === '12h' ? 43200 : 86400;
           
           return new Promise((resolve) => {
             const ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089');
@@ -291,7 +302,7 @@ export function useCryptoScanner() {
     const latest = klines[klines.length - 1];
 
     let formattedSymbol = symbol;
-    if (exchange === 'binance' || exchange === 'bybit') {
+    if (exchange === 'binance' || exchange === 'bybit' || exchange === 'spotspecials' || exchange === 'leveragespecials') {
       formattedSymbol = symbol.replace('USDT', '/USDT');
     } else if (exchange === 'kucoin') {
       formattedSymbol = symbol.replace('-', '/');
