@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { Exchange, Timeframe, CryptoPair, calculateRSI, calculateStochRSI, calculateMFI, spotSpecialPairs, leverageSpecialPairs } from '@/lib/exchanges';
+import { Exchange, Timeframe, CryptoPair, calculateRSI, calculateStochRSI, calculateMFI, spotSpecialPairs, leverageSpecialPairs, derivForexPairs, derivStocks, derivStockIndices, derivCommodities, derivETFs } from '@/lib/exchanges';
 
 export type SortBy = 'avg_buy' | 'avg_sell' | 'stochrsi_desc' | 'stochrsi_asc' | 'rsi_desc' | 'rsi_asc' | 'mfi_desc' | 'mfi_asc' | 'volume_desc';
 
@@ -107,6 +107,21 @@ export function useCryptoScanner() {
         }
         case 'deriv': {
           return DERIV_SYNTHETIC_INDICES.map(s => s.symbol);
+        }
+        case 'derivforex': {
+          return derivForexPairs.map(s => s.symbol);
+        }
+        case 'derivstocks': {
+          return derivStocks.map(s => s.symbol);
+        }
+        case 'derivstockindices': {
+          return derivStockIndices.map(s => s.symbol);
+        }
+        case 'derivcommodity': {
+          return derivCommodities.map(s => s.symbol);
+        }
+        case 'derivetfs': {
+          return derivETFs.map(s => s.symbol);
         }
         case 'spotspecials': {
           // Return Binance-formatted symbols for spot specials
@@ -229,7 +244,12 @@ export function useCryptoScanner() {
           }
           return null;
         }
-        case 'deriv': {
+        case 'deriv':
+        case 'derivforex':
+        case 'derivstocks':
+        case 'derivstockindices':
+        case 'derivcommodity':
+        case 'derivetfs': {
           // Use Deriv WebSocket API for ticks/candles
           const granularity = timeframe === '1m' ? 60 : timeframe === '5m' ? 300 : timeframe === '15m' ? 900 : timeframe === '30m' ? 1800 : timeframe === '4h' ? 14400 : timeframe === '12h' ? 43200 : 86400;
           
@@ -313,6 +333,21 @@ export function useCryptoScanner() {
     } else if (exchange === 'deriv') {
       const derivIndex = DERIV_SYNTHETIC_INDICES.find(s => s.symbol === symbol);
       formattedSymbol = derivIndex?.name || symbol;
+    } else if (exchange === 'derivforex') {
+      const forexPair = derivForexPairs.find(s => s.symbol === symbol);
+      formattedSymbol = forexPair?.name || symbol;
+    } else if (exchange === 'derivstocks') {
+      const stock = derivStocks.find(s => s.symbol === symbol);
+      formattedSymbol = stock?.name || symbol;
+    } else if (exchange === 'derivstockindices') {
+      const index = derivStockIndices.find(s => s.symbol === symbol);
+      formattedSymbol = index?.name || symbol;
+    } else if (exchange === 'derivcommodity') {
+      const commodity = derivCommodities.find(s => s.symbol === symbol);
+      formattedSymbol = commodity?.name || symbol;
+    } else if (exchange === 'derivetfs') {
+      const etf = derivETFs.find(s => s.symbol === symbol);
+      formattedSymbol = etf?.name || symbol;
     }
 
     return {
