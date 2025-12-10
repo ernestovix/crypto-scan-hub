@@ -334,46 +334,36 @@ export function PairDetailPage({ pair, exchange, onBack }: PairDetailPageProps) 
             <span className="text-sm">Loading orderbook...</span>
           </div>
         ) : orderbook ? (
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-4 text-sm">
             {/* Metrics Column */}
             <div className="bg-card rounded-lg p-4 border border-border">
               <h4 className="text-lg font-medium text-muted-foreground mb-4 text-center">Metrics</h4>
               <div className="space-y-3">
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">Percentage</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">Weight</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">Volume</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-border">
-                  <span className="text-muted-foreground">Amount (USD)</span>
-                </div>
-                <div className="flex justify-between py-2">
-                  <span className="text-muted-foreground">Orders</span>
-                </div>
+                <div className="py-2 border-b border-border text-muted-foreground">Percentage</div>
+                <div className="py-2 border-b border-border text-muted-foreground">Weight</div>
+                <div className="py-2 border-b border-border text-muted-foreground">Volume</div>
+                <div className="py-2 border-b border-border text-muted-foreground">Amount USD</div>
+                <div className="py-2 text-muted-foreground">Orders</div>
               </div>
             </div>
 
             {/* Buyers Column */}
             <div className="bg-success/10 rounded-lg p-4 border border-success/30">
-              <h4 className="text-lg font-medium text-success mb-4 text-center">Buyers (Bids)</h4>
+              <h4 className="text-lg font-medium text-success mb-4 text-center">Buyers</h4>
               <div className="space-y-3">
-                <div className="flex justify-center py-2 border-b border-success/20">
+                <div className="py-2 border-b border-success/20 text-center">
                   <span className="text-success font-bold text-lg">{orderbook.buyerPercentage.toFixed(1)}%</span>
                 </div>
-                <div className="flex justify-center py-2 border-b border-success/20">
+                <div className="py-2 border-b border-success/20 text-center">
                   <span className="text-success font-semibold">{orderbook.buyerWeight.toFixed(1)}%</span>
                 </div>
-                <div className="flex justify-center py-2 border-b border-success/20">
+                <div className="py-2 border-b border-success/20 text-center">
                   <span className="text-success font-mono">{formatVolume(orderbook.buyerVolume)}</span>
                 </div>
-                <div className="flex justify-center py-2 border-b border-success/20">
+                <div className="py-2 border-b border-success/20 text-center">
                   <span className="text-success font-mono">${formatVolume(orderbook.buyerAmount)}</span>
                 </div>
-                <div className="flex justify-center py-2">
+                <div className="py-2 text-center">
                   <span className="text-success">{orderbook.totalBids}</span>
                 </div>
               </div>
@@ -381,21 +371,21 @@ export function PairDetailPage({ pair, exchange, onBack }: PairDetailPageProps) 
 
             {/* Sellers Column */}
             <div className="bg-destructive/10 rounded-lg p-4 border border-destructive/30">
-              <h4 className="text-lg font-medium text-destructive mb-4 text-center">Sellers (Asks)</h4>
+              <h4 className="text-lg font-medium text-destructive mb-4 text-center">Sellers</h4>
               <div className="space-y-3">
-                <div className="flex justify-center py-2 border-b border-destructive/20">
+                <div className="py-2 border-b border-destructive/20 text-center">
                   <span className="text-destructive font-bold text-lg">{orderbook.sellerPercentage.toFixed(1)}%</span>
                 </div>
-                <div className="flex justify-center py-2 border-b border-destructive/20">
+                <div className="py-2 border-b border-destructive/20 text-center">
                   <span className="text-destructive font-semibold">{orderbook.sellerWeight.toFixed(1)}%</span>
                 </div>
-                <div className="flex justify-center py-2 border-b border-destructive/20">
+                <div className="py-2 border-b border-destructive/20 text-center">
                   <span className="text-destructive font-mono">{formatVolume(orderbook.sellerVolume)}</span>
                 </div>
-                <div className="flex justify-center py-2 border-b border-destructive/20">
+                <div className="py-2 border-b border-destructive/20 text-center">
                   <span className="text-destructive font-mono">${formatVolume(orderbook.sellerAmount)}</span>
                 </div>
-                <div className="flex justify-center py-2">
+                <div className="py-2 text-center">
                   <span className="text-destructive">{orderbook.totalAsks}</span>
                 </div>
               </div>

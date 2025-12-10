@@ -1,4 +1,4 @@
-export type Exchange = 'binance' | 'bybit' | 'kucoin' | 'cryptocom' | 'coinmarketcap' | 'coingecko' | 'deriv' | 'spotspecials' | 'leveragespecials';
+export type Exchange = 'binance' | 'bybit' | 'kucoin' | 'cryptocom' | 'coinmarketcap' | 'coingecko' | 'deriv' | 'derivforex' | 'derivstocks' | 'derivstockindices' | 'derivcommodity' | 'derivetfs' | 'spotspecials' | 'leveragespecials';
 
 export interface ExchangeInfo {
   id: Exchange;
@@ -14,9 +14,14 @@ export const exchanges: ExchangeInfo[] = [
   { id: 'cryptocom', name: 'Crypto.com', logo: 'https://cryptologos.cc/logos/cronos-cro-logo.png', hoverColor: 'hover:bg-blue-700' },
   { id: 'coinmarketcap', name: 'CoinMarketCap', logo: 'https://coinmarketcap.com/apple-touch-icon.png', hoverColor: 'hover:bg-blue-500' },
   { id: 'coingecko', name: 'CoinGecko', logo: 'https://static.coingecko.com/s/coingecko-logo-8903d34ce19ca4be1c81f0db30e924154750d208683fad7ae6f2ce06c76d0a56.png', hoverColor: 'hover:bg-green-500' },
-  { id: 'deriv', name: 'Deriv Synthetic Indices', logo: 'https://deriv.com/static/1b57a116945933314571e0e5e54ab0d5/9dcb6/deriv.webp', hoverColor: 'hover:bg-red-600' },
-  { id: 'spotspecials', name: 'Spot Specials', logo: 'https://img.icons8.com/color/96/us-dollar-circled.png', hoverColor: 'hover:bg-emerald-600' },
-  { id: 'leveragespecials', name: 'Leverage Special', logo: 'https://img.icons8.com/color/96/pound-sterling.png', hoverColor: 'hover:bg-purple-600' },
+  { id: 'deriv', name: 'Deriv Synthetic', logo: 'https://cdn.prod.website-files.com/6602c281d5bb5d9192cb9e9a/660a0ca6ac68b73fe7dd6ca3_deriv-logo-coral-text.svg', hoverColor: 'hover:bg-red-600' },
+  { id: 'derivforex', name: 'Deriv Forex', logo: 'https://cdn.prod.website-files.com/6602c281d5bb5d9192cb9e9a/660a0ca6ac68b73fe7dd6ca3_deriv-logo-coral-text.svg', hoverColor: 'hover:bg-blue-600' },
+  { id: 'derivstocks', name: 'Deriv Stocks', logo: 'https://cdn.prod.website-files.com/6602c281d5bb5d9192cb9e9a/660a0ca6ac68b73fe7dd6ca3_deriv-logo-coral-text.svg', hoverColor: 'hover:bg-indigo-600' },
+  { id: 'derivstockindices', name: 'Deriv Stock Indices', logo: 'https://cdn.prod.website-files.com/6602c281d5bb5d9192cb9e9a/660a0ca6ac68b73fe7dd6ca3_deriv-logo-coral-text.svg', hoverColor: 'hover:bg-violet-600' },
+  { id: 'derivcommodity', name: 'Deriv Commodity', logo: 'https://cdn.prod.website-files.com/6602c281d5bb5d9192cb9e9a/660a0ca6ac68b73fe7dd6ca3_deriv-logo-coral-text.svg', hoverColor: 'hover:bg-amber-600' },
+  { id: 'derivetfs', name: 'Deriv ETFs', logo: 'https://cdn.prod.website-files.com/6602c281d5bb5d9192cb9e9a/660a0ca6ac68b73fe7dd6ca3_deriv-logo-coral-text.svg', hoverColor: 'hover:bg-teal-600' },
+  { id: 'spotspecials', name: 'Spot Specials', logo: 'https://img.icons8.com/fluency/96/us-dollar--v1.png', hoverColor: 'hover:bg-emerald-600' },
+  { id: 'leveragespecials', name: 'Leverage Special', logo: 'https://img.icons8.com/fluency/96/british-pound.png', hoverColor: 'hover:bg-purple-600' },
 ];
 
 export type Timeframe = '1m' | '5m' | '15m' | '30m' | '4h' | '12h' | '1d';
@@ -138,6 +143,11 @@ export function getTradingUrl(exchange: Exchange, symbol: string): string {
     coinmarketcap: 'https://coinmarketcap.com/currencies/',
     coingecko: 'https://www.coingecko.com/en/coins/',
     deriv: 'https://deriv.com/dtrader',
+    derivforex: 'https://deriv.com/dtrader',
+    derivstocks: 'https://deriv.com/dtrader',
+    derivstockindices: 'https://deriv.com/dtrader',
+    derivcommodity: 'https://deriv.com/dtrader',
+    derivetfs: 'https://deriv.com/dtrader',
     spotspecials: 'https://www.binance.com/en/trade/',
     leveragespecials: 'https://www.bybit.com/en/trade/spot/'
   };
@@ -148,12 +158,96 @@ export function getTradingUrl(exchange: Exchange, symbol: string): string {
     return base[exchange] + cleanSymbol;
   }
   
-  if (exchange === 'deriv') {
+  if (exchange === 'deriv' || exchange === 'derivforex' || exchange === 'derivstocks' || exchange === 'derivstockindices' || exchange === 'derivcommodity' || exchange === 'derivetfs') {
     return base[exchange];
   }
   
   return base[exchange] + symbol.replace('/', '_');
 }
+
+// Deriv Forex pairs
+export const derivForexPairs = [
+  { symbol: 'frxAUDCAD', name: 'AUD/CAD' },
+  { symbol: 'frxAUDCHF', name: 'AUD/CHF' },
+  { symbol: 'frxAUDJPY', name: 'AUD/JPY' },
+  { symbol: 'frxAUDNZD', name: 'AUD/NZD' },
+  { symbol: 'frxAUDUSD', name: 'AUD/USD' },
+  { symbol: 'frxEURAUD', name: 'EUR/AUD' },
+  { symbol: 'frxEURCAD', name: 'EUR/CAD' },
+  { symbol: 'frxEURCHF', name: 'EUR/CHF' },
+  { symbol: 'frxEURGBP', name: 'EUR/GBP' },
+  { symbol: 'frxEURJPY', name: 'EUR/JPY' },
+  { symbol: 'frxEURNZD', name: 'EUR/NZD' },
+  { symbol: 'frxEURUSD', name: 'EUR/USD' },
+  { symbol: 'frxGBPAUD', name: 'GBP/AUD' },
+  { symbol: 'frxGBPCAD', name: 'GBP/CAD' },
+  { symbol: 'frxGBPCHF', name: 'GBP/CHF' },
+  { symbol: 'frxGBPJPY', name: 'GBP/JPY' },
+  { symbol: 'frxGBPNZD', name: 'GBP/NZD' },
+  { symbol: 'frxGBPUSD', name: 'GBP/USD' },
+  { symbol: 'frxNZDJPY', name: 'NZD/JPY' },
+  { symbol: 'frxNZDUSD', name: 'NZD/USD' },
+  { symbol: 'frxUSDCAD', name: 'USD/CAD' },
+  { symbol: 'frxUSDCHF', name: 'USD/CHF' },
+  { symbol: 'frxUSDJPY', name: 'USD/JPY' },
+  { symbol: 'frxUSDMXN', name: 'USD/MXN' },
+  { symbol: 'frxUSDNOK', name: 'USD/NOK' },
+  { symbol: 'frxUSDSEK', name: 'USD/SEK' },
+];
+
+// Deriv Stocks
+export const derivStocks = [
+  { symbol: 'AAPL', name: 'Apple Inc' },
+  { symbol: 'AMZN', name: 'Amazon' },
+  { symbol: 'GOOGL', name: 'Alphabet' },
+  { symbol: 'META', name: 'Meta Platforms' },
+  { symbol: 'MSFT', name: 'Microsoft' },
+  { symbol: 'NFLX', name: 'Netflix' },
+  { symbol: 'NVDA', name: 'NVIDIA' },
+  { symbol: 'TSLA', name: 'Tesla' },
+  { symbol: 'BA', name: 'Boeing' },
+  { symbol: 'DIS', name: 'Walt Disney' },
+  { symbol: 'IBM', name: 'IBM' },
+  { symbol: 'INTC', name: 'Intel' },
+  { symbol: 'PFE', name: 'Pfizer' },
+  { symbol: 'PYPL', name: 'PayPal' },
+  { symbol: 'V', name: 'Visa' },
+];
+
+// Deriv Stock Indices
+export const derivStockIndices = [
+  { symbol: 'OTC_AS51', name: 'Australia 200' },
+  { symbol: 'OTC_DJI', name: 'Wall Street 30' },
+  { symbol: 'OTC_FCHI', name: 'France 40' },
+  { symbol: 'OTC_FTSE', name: 'UK 100' },
+  { symbol: 'OTC_GDAXI', name: 'Germany 40' },
+  { symbol: 'OTC_HSI', name: 'Hong Kong 50' },
+  { symbol: 'OTC_N225', name: 'Japan 225' },
+  { symbol: 'OTC_NDX', name: 'US Tech 100' },
+  { symbol: 'OTC_SPC', name: 'US 500' },
+  { symbol: 'OTC_SSMI', name: 'Swiss 20' },
+];
+
+// Deriv Commodities
+export const derivCommodities = [
+  { symbol: 'frxXAUUSD', name: 'Gold/USD' },
+  { symbol: 'frxXAGUSD', name: 'Silver/USD' },
+  { symbol: 'frxXPDUSD', name: 'Palladium/USD' },
+  { symbol: 'frxXPTUSD', name: 'Platinum/USD' },
+  { symbol: 'WLDOIL', name: 'Oil/USD' },
+];
+
+// Deriv ETFs
+export const derivETFs = [
+  { symbol: 'SPY', name: 'SPDR S&P 500 ETF' },
+  { symbol: 'QQQ', name: 'Invesco QQQ Trust' },
+  { symbol: 'IWM', name: 'iShares Russell 2000' },
+  { symbol: 'EEM', name: 'iShares MSCI Emerging Markets' },
+  { symbol: 'GLD', name: 'SPDR Gold Shares' },
+  { symbol: 'SLV', name: 'iShares Silver Trust' },
+  { symbol: 'USO', name: 'United States Oil Fund' },
+  { symbol: 'VXX', name: 'iPath Series B S&P 500 VIX' },
+];
 
 // Special pairs lists
 export const spotSpecialPairs = [
