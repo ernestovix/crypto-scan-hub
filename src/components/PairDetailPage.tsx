@@ -69,6 +69,63 @@ export function PairDetailPage({ pair, exchange, onBack }: PairDetailPageProps) 
     return ['deriv', 'derivforex', 'derivstocks', 'derivstockindices', 'derivcommodity', 'derivetfs'].includes(ex);
   };
 
+  // Get the original API symbol from the display name for Deriv products
+  const getDerivApiSymbol = (): string => {
+    // Import the symbol lists from exchanges
+    const DERIV_SYNTHETIC_INDICES = [
+      { symbol: 'R_10', name: 'Volatility 10 Index' },
+      { symbol: 'R_25', name: 'Volatility 25 Index' },
+      { symbol: 'R_50', name: 'Volatility 50 Index' },
+      { symbol: 'R_75', name: 'Volatility 75 Index' },
+      { symbol: 'R_100', name: 'Volatility 100 Index' },
+      { symbol: '1HZ10V', name: 'Volatility 10 (1s) Index' },
+      { symbol: '1HZ25V', name: 'Volatility 25 (1s) Index' },
+      { symbol: '1HZ50V', name: 'Volatility 50 (1s) Index' },
+      { symbol: '1HZ75V', name: 'Volatility 75 (1s) Index' },
+      { symbol: '1HZ100V', name: 'Volatility 100 (1s) Index' },
+      { symbol: 'BOOM300N', name: 'Boom 300 Index' },
+      { symbol: 'BOOM500', name: 'Boom 500 Index' },
+      { symbol: 'BOOM1000', name: 'Boom 1000 Index' },
+      { symbol: 'CRASH300N', name: 'Crash 300 Index' },
+      { symbol: 'CRASH500', name: 'Crash 500 Index' },
+      { symbol: 'CRASH1000', name: 'Crash 1000 Index' },
+      { symbol: 'JD10', name: 'Jump 10 Index' },
+      { symbol: 'JD25', name: 'Jump 25 Index' },
+      { symbol: 'JD50', name: 'Jump 50 Index' },
+      { symbol: 'JD75', name: 'Jump 75 Index' },
+      { symbol: 'JD100', name: 'Jump 100 Index' },
+      { symbol: 'stpRNG', name: 'Step Index' },
+      { symbol: 'RDBEAR', name: 'Bear Market Index' },
+      { symbol: 'RDBULL', name: 'Bull Market Index' },
+    ];
+
+    // Import from exchanges.ts
+    const { derivForexPairs, derivStocks, derivStockIndices, derivCommodities, derivETFs } = require('@/lib/exchanges');
+    
+    const displayName = pair.symbol;
+    
+    // Search in all Deriv symbol lists
+    const syntheticMatch = DERIV_SYNTHETIC_INDICES.find(s => s.name === displayName);
+    if (syntheticMatch) return syntheticMatch.symbol;
+    
+    const forexMatch = derivForexPairs.find((s: {symbol: string, name: string}) => s.name === displayName);
+    if (forexMatch) return forexMatch.symbol;
+    
+    const stockMatch = derivStocks.find((s: {symbol: string, name: string}) => s.name === displayName);
+    if (stockMatch) return stockMatch.symbol;
+    
+    const indexMatch = derivStockIndices.find((s: {symbol: string, name: string}) => s.name === displayName);
+    if (indexMatch) return indexMatch.symbol;
+    
+    const commodityMatch = derivCommodities.find((s: {symbol: string, name: string}) => s.name === displayName);
+    if (commodityMatch) return commodityMatch.symbol;
+    
+    const etfMatch = derivETFs.find((s: {symbol: string, name: string}) => s.name === displayName);
+    if (etfMatch) return etfMatch.symbol;
+    
+    return displayName; // Fallback to the display name
+  };
+
   const getSymbolForApi = () => {
     // Convert pair symbol back to API format
     if (exchange === 'binance' || exchange === 'spotspecials') {
@@ -80,15 +137,15 @@ export function PairDetailPage({ pair, exchange, onBack }: PairDetailPageProps) 
     } else if (exchange === 'cryptocom') {
       return pair.symbol.replace('/', '_');
     } else if (isDerivExchange(exchange)) {
-      // Return the original Deriv symbol format
-      return pair.symbol.replace('/', '');
+      // For Deriv, we need to convert the display name back to API symbol
+      return getDerivApiSymbol();
     }
     return pair.symbol;
   };
 
   const fetchDerivKlines = (timeframe: string): Promise<number[][] | null> => {
     return new Promise((resolve) => {
-      const derivSymbol = pair.symbol.replace('/', '');
+      const derivSymbol = getDerivApiSymbol();
       const granularityMap: Record<string, number> = {
         '1m': 60, '5m': 300, '15m': 900, '30m': 1800, '4h': 14400, '12h': 43200, '1d': 86400
       };
