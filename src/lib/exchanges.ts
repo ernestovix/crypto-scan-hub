@@ -20,7 +20,7 @@ export const exchanges: ExchangeInfo[] = [
   { id: 'derivstockindices', name: 'Deriv Stock Indices', logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRHtsVJDNvheGvB4o2auaoJOYisHNR8g0qRLslOiyoMGQ&s=10', hoverColor: 'hover:bg-violet-600' },
   { id: 'derivcommodity', name: 'Deriv Commodity', logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRHtsVJDNvheGvB4o2auaoJOYisHNR8g0qRLslOiyoMGQ&s=10', hoverColor: 'hover:bg-amber-600' },
   { id: 'derivetfs', name: 'Deriv ETFs', logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRHtsVJDNvheGvB4o2auaoJOYisHNR8g0qRLslOiyoMGQ&s=10', hoverColor: 'hover:bg-teal-600' },
-  { id: 'spotspecials', name: 'Spot Specials', logo: 'https://img.icons8.com/fluency/96/us-dollar--v1.png', hoverColor: 'hover:bg-emerald-600' },
+  { id: 'spotspecials', name: 'Spot Specials', logo: 'https://thumbs.dreamstime.com/b/dollar-symbol-4647739.jpg', hoverColor: 'hover:bg-emerald-600' },
   { id: 'leveragespecials', name: 'Leverage Special', logo: 'https://img.icons8.com/fluency/96/british-pound.png', hoverColor: 'hover:bg-purple-600' },
 ];
 
