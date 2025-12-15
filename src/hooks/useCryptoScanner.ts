@@ -128,8 +128,8 @@ export function useCryptoScanner() {
           return spotSpecialPairs.map(p => p.replace('/', ''));
         }
         case 'leveragespecials': {
-          // Return Bybit-formatted symbols for leverage specials
-          return leverageSpecialPairs.map(p => p.replace('/', ''));
+          // Return Gate.io-formatted symbols for leverage specials (uses underscore)
+          return leverageSpecialPairs.map(p => p.replace('/', '_'));
         }
         default:
           return [];
@@ -142,10 +142,11 @@ export function useCryptoScanner() {
 
   const fetchKlines = async (exchange: Exchange, symbol: string, timeframe: Timeframe): Promise<number[][] | null> => {
     const bybitIntervals: Record<Timeframe, string> = { '1m': '1', '5m': '5', '15m': '15', '30m': '30', '4h': '240', '12h': '720', '1d': 'D' };
+    const gateioIntervals: Record<Timeframe, string> = { '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '4h': '4h', '12h': '12h', '1d': '1d' };
     
     try {
       // Map special exchanges to their data sources
-      const effectiveExchange = exchange === 'spotspecials' ? 'binance' : exchange === 'leveragespecials' ? 'bybit' : exchange;
+      const effectiveExchange = exchange === 'spotspecials' ? 'binance' : exchange === 'leveragespecials' ? 'gateio' : exchange;
       
       switch (effectiveExchange) {
         case 'binance': {
@@ -170,6 +171,19 @@ export function useCryptoScanner() {
             parseFloat(d[3]),
             parseFloat(d[4]),
             parseFloat(d[6])
+          ]);
+        }
+        case 'gateio': {
+          const res = await fetch(`https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=${symbol}&interval=${gateioIntervals[timeframe]}&limit=100`);
+          const data = await res.json();
+          if (!Array.isArray(data)) return null;
+          return data.map((d: string[]) => [
+            parseFloat(d[0]) * 1000,
+            parseFloat(d[5]), // open
+            parseFloat(d[3]), // high
+            parseFloat(d[4]), // low
+            parseFloat(d[2]), // close
+            parseFloat(d[1])  // volume
           ]);
         }
         case 'kucoin': {
@@ -329,8 +343,10 @@ export function useCryptoScanner() {
     const latest = klines[klines.length - 1];
 
     let formattedSymbol = symbol;
-    if (exchange === 'binance' || exchange === 'bybit' || exchange === 'spotspecials' || exchange === 'leveragespecials') {
+    if (exchange === 'binance' || exchange === 'bybit' || exchange === 'spotspecials') {
       formattedSymbol = symbol.replace('USDT', '/USDT');
+    } else if (exchange === 'leveragespecials') {
+      formattedSymbol = symbol.replace('_', '/');
     } else if (exchange === 'kucoin') {
       formattedSymbol = symbol.replace('-', '/');
     } else if (exchange === 'cryptocom') {
