@@ -307,9 +307,16 @@ export function useCryptoScanner() {
     }
   };
 
-  const fetchPairData = async (exchange: Exchange, symbol: string, timeframe: Timeframe): Promise<CryptoPair | null> => {
+  const fetchPairData = async (exchange: Exchange, symbol: string, timeframe: Timeframe, retryCount = 0): Promise<CryptoPair | null> => {
     const klines = await fetchKlines(exchange, symbol, timeframe);
-    if (!klines || klines.length < 50) return null;
+    if (!klines || klines.length < 14) {
+      // Retry once for leveragespecials/spotspecials in case of transient failure
+      if ((exchange === 'leveragespecials' || exchange === 'spotspecials') && retryCount < 1) {
+        await new Promise(r => setTimeout(r, 500));
+        return fetchPairData(exchange, symbol, timeframe, retryCount + 1);
+      }
+      return null;
+    }
 
     const highs = klines.map(k => k[2]);
     const lows = klines.map(k => k[3]);
@@ -369,7 +376,8 @@ export function useCryptoScanner() {
     setProgress({ current: 0, total: symbols.length });
 
     const results: CryptoPair[] = [];
-    const batchSize = 10;
+    // Use smaller batch size for specials to avoid rate limiting
+    const batchSize = (exchange === 'leveragespecials' || exchange === 'spotspecials') ? 5 : 10;
 
     for (let i = 0; i < symbols.length; i += batchSize) {
       const batch = symbols.slice(i, i + batchSize);
@@ -381,6 +389,11 @@ export function useCryptoScanner() {
       results.push(...validResults);
       setProgress({ current: Math.min(i + batchSize, symbols.length), total: symbols.length });
       setPairs([...results]);
+      
+      // Add small delay between batches for specials to avoid rate limiting
+      if ((exchange === 'leveragespecials' || exchange === 'spotspecials') && i + batchSize < symbols.length) {
+        await new Promise(r => setTimeout(r, 200));
+      }
     }
 
     setLoading(false);
