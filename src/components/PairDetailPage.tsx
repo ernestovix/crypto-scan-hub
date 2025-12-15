@@ -130,8 +130,10 @@ export function PairDetailPage({ pair, exchange, onBack }: PairDetailPageProps) 
     // Convert pair symbol back to API format
     if (exchange === 'binance' || exchange === 'spotspecials') {
       return pair.symbol.replace('/', '');
-    } else if (exchange === 'bybit' || exchange === 'leveragespecials') {
+    } else if (exchange === 'bybit') {
       return pair.symbol.replace('/', '');
+    } else if (exchange === 'leveragespecials') {
+      return pair.symbol.replace('/', '_');
     } else if (exchange === 'kucoin') {
       return pair.symbol.replace('/', '-');
     } else if (exchange === 'cryptocom') {
@@ -213,7 +215,7 @@ export function PairDetailPage({ pair, exchange, onBack }: PairDetailPageProps) 
 
   const fetchKlinesForTimeframe = async (timeframe: string): Promise<number[][] | null> => {
     const symbol = getSymbolForApi();
-    const effectiveExchange = exchange === 'spotspecials' ? 'binance' : exchange === 'leveragespecials' ? 'bybit' : exchange;
+    const effectiveExchange = exchange === 'spotspecials' ? 'binance' : exchange === 'leveragespecials' ? 'gateio' : exchange;
     
     try {
       // Handle Deriv exchanges
@@ -243,6 +245,19 @@ export function PairDetailPage({ pair, exchange, onBack }: PairDetailPageProps) 
           parseFloat(d[3]),
           parseFloat(d[4]),
           parseFloat(d[6])
+        ]);
+      } else if (effectiveExchange === 'gateio') {
+        const gateioIntervals: Record<string, string> = { '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '4h': '4h', '12h': '12h', '1d': '1d' };
+        const res = await fetch(`https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=${symbol}&interval=${gateioIntervals[timeframe]}&limit=100`);
+        const data = await res.json();
+        if (!Array.isArray(data)) return null;
+        return data.map((d: string[]) => [
+          parseFloat(d[0]) * 1000,
+          parseFloat(d[5]), // open
+          parseFloat(d[3]), // high
+          parseFloat(d[4]), // low
+          parseFloat(d[2]), // close
+          parseFloat(d[1])  // volume
         ]);
       } else if (effectiveExchange === 'kucoin') {
         const res = await fetch(`https://api.kucoin.com/api/v1/market/candles?type=${timeframe}&symbol=${symbol}`);
@@ -314,7 +329,7 @@ export function PairDetailPage({ pair, exchange, onBack }: PairDetailPageProps) 
   const loadOrderbook = async () => {
     setOrderbookLoading(true);
     const symbol = getSymbolForApi();
-    const effectiveExchange = exchange === 'spotspecials' ? 'binance' : exchange === 'leveragespecials' ? 'bybit' : exchange;
+    const effectiveExchange = exchange === 'spotspecials' ? 'binance' : exchange === 'leveragespecials' ? 'gateio' : exchange;
 
     try {
       let bids: [number, number][] = [];
@@ -345,6 +360,13 @@ export function PairDetailPage({ pair, exchange, onBack }: PairDetailPageProps) 
         if (data.result) {
           bids = data.result.b.map((b: string[]) => [parseFloat(b[0]), parseFloat(b[1])]);
           asks = data.result.a.map((a: string[]) => [parseFloat(a[0]), parseFloat(a[1])]);
+        }
+      } else if (effectiveExchange === 'gateio') {
+        const res = await fetch(`https://api.gateio.ws/api/v4/spot/order_book?currency_pair=${symbol}&limit=50`);
+        const data = await res.json();
+        if (data.bids && data.asks) {
+          bids = data.bids.map((b: string[]) => [parseFloat(b[0]), parseFloat(b[1])]);
+          asks = data.asks.map((a: string[]) => [parseFloat(a[0]), parseFloat(a[1])]);
         }
       } else if (effectiveExchange === 'kucoin') {
         const res = await fetch(`https://api.kucoin.com/api/v1/market/orderbook/level2_100?symbol=${symbol}`);

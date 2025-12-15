@@ -1,4 +1,4 @@
-export type Exchange = 'binance' | 'bybit' | 'kucoin' | 'cryptocom' | 'coinmarketcap' | 'coingecko' | 'deriv' | 'derivforex' | 'derivstocks' | 'derivstockindices' | 'derivcommodity' | 'derivetfs' | 'spotspecials' | 'leveragespecials';
+export type Exchange = 'binance' | 'bybit' | 'kucoin' | 'cryptocom' | 'coinmarketcap' | 'coingecko' | 'deriv' | 'derivforex' | 'derivstocks' | 'derivstockindices' | 'derivcommodity' | 'derivetfs' | 'spotspecials' | 'leveragespecials' | 'gateio';
 
 export interface ExchangeInfo {
   id: Exchange;
@@ -149,7 +149,8 @@ export function getTradingUrl(exchange: Exchange, symbol: string): string {
     derivcommodity: 'https://deriv.com/dtrader',
     derivetfs: 'https://deriv.com/dtrader',
     spotspecials: 'https://www.binance.com/en/trade/',
-    leveragespecials: 'https://www.bybit.com/en/trade/spot/'
+    leveragespecials: 'https://www.gate.io/trade/',
+    gateio: 'https://www.gate.io/trade/'
   };
   
   const cleanSymbol = symbol.replace('/', '_').replace('/USDT', '').replace('_USDT', '').toLowerCase();
