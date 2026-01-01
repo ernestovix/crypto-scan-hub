@@ -1,11 +1,10 @@
 import { useState, useCallback } from 'react';
-import { Exchange, Timeframe, CryptoPair, calculateRSI, calculateStochRSI, calculateMFI, spotSpecialPairs, leverageSpecialPairs, derivForexPairs, derivStocks, derivStockIndices, derivCommodities, derivETFs } from '@/lib/exchanges';
+import { Exchange, Timeframe, CryptoPair, calculateRSI, L1SPairs, MemePairs, derivForexPairs, derivStocks, derivStockIndices, derivCommodities, derivETFs } from '@/lib/exchanges';
 
-export type SortBy = 'avg_buy' | 'avg_sell' | 'stochrsi_desc' | 'stochrsi_asc' | 'rsi_desc' | 'rsi_asc' | 'mfi_desc' | 'mfi_asc' | 'volume_desc';
+export type SortBy = 'price_asc' | 'price_desc' | 'rsi5m_asc' | 'rsi5m_desc' | 'rsi15m_asc' | 'rsi15m_desc' | 'rsi30m_asc' | 'rsi30m_desc' | 'rsi1h_asc' | 'rsi1h_desc' | 'rsi4h_asc' | 'rsi4h_desc' | 'rsi1d_asc' | 'rsi1d_desc';
 
 const COINGECKO_API_KEY = 'CG-E4WeSxWKJURBJTrS4bo9Jeoc';
 const COINMARKETCAP_API_KEY = '056e3756b6204df1b6f60d0ec47044cc';
-const DERIV_API_TOKEN = 'FDJ3Gj7c1Y2Ikj7';
 
 // Deriv Synthetic Indices symbols
 const DERIV_SYNTHETIC_INDICES = [
@@ -34,6 +33,9 @@ const DERIV_SYNTHETIC_INDICES = [
   { symbol: 'RDBEAR', name: 'Bear Market Index' },
   { symbol: 'RDBULL', name: 'Bull Market Index' },
 ];
+
+const RSI_TIMEFRAMES = ['5m', '15m', '30m', '1h', '4h', '1d'] as const;
+type RsiTimeframe = typeof RSI_TIMEFRAMES[number];
 
 export function useCryptoScanner() {
   const [pairs, setPairs] = useState<CryptoPair[]>([]);
@@ -92,7 +94,6 @@ export function useCryptoScanner() {
           return [];
         }
         case 'coinmarketcap': {
-          // Use a CORS proxy for CoinMarketCap
           const res = await fetch(`https://corsproxy.io/?${encodeURIComponent('https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=100')}`, {
             headers: {
               'X-CMC_PRO_API_KEY': COINMARKETCAP_API_KEY
@@ -123,13 +124,13 @@ export function useCryptoScanner() {
         case 'derivetfs': {
           return derivETFs.map(s => s.symbol);
         }
-        case 'spotspecials': {
-          // Return Binance-formatted symbols for spot specials
-          return spotSpecialPairs.map(p => p.replace('/', ''));
+        case 'l1s': {
+          // L1S pairs use CoinMarketCap - convert to slug format
+          return L1SPairs.map(p => p.replace('/USDT', '').toLowerCase());
         }
-        case 'leveragespecials': {
-          // Return Gate.io-formatted symbols for leverage specials (uses underscore)
-          return leverageSpecialPairs.map(p => p.replace('/', '_'));
+        case 'meme': {
+          // Meme pairs use CoinMarketCap - convert to slug format
+          return MemePairs.map(p => p.replace('/USDT', '').toLowerCase());
         }
         default:
           return [];
@@ -140,17 +141,17 @@ export function useCryptoScanner() {
     }
   };
 
-  const fetchKlines = async (exchange: Exchange, symbol: string, timeframe: Timeframe): Promise<number[][] | null> => {
-    const bybitIntervals: Record<Timeframe, string> = { '1m': '1', '5m': '5', '15m': '15', '30m': '30', '4h': '240', '12h': '720', '1d': 'D' };
-    const gateioIntervals: Record<Timeframe, string> = { '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '4h': '4h', '12h': '12h', '1d': '1d' };
+  const fetchKlines = async (exchange: Exchange, symbol: string, timeframe: RsiTimeframe): Promise<number[][] | null> => {
+    const bybitIntervals: Record<RsiTimeframe, string> = { '5m': '5', '15m': '15', '30m': '30', '1h': '60', '4h': '240', '1d': 'D' };
+    const binanceIntervals: Record<RsiTimeframe, string> = { '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1h', '4h': '4h', '1d': '1d' };
     
     try {
-      // Map special exchanges to their data sources
-      const effectiveExchange = exchange === 'spotspecials' ? 'binance' : exchange === 'leveragespecials' ? 'gateio' : exchange;
+      // Map special exchanges to CoinMarketCap
+      const effectiveExchange = (exchange === 'l1s' || exchange === 'meme') ? 'coinmarketcap' : exchange;
       
       switch (effectiveExchange) {
         case 'binance': {
-          const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${timeframe}&limit=100`);
+          const res = await fetch(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${binanceIntervals[timeframe]}&limit=100`);
           const data = await res.json();
           return data.map((d: string[]) => [
             parseFloat(d[0]),
@@ -173,19 +174,6 @@ export function useCryptoScanner() {
             parseFloat(d[6])
           ]);
         }
-        case 'gateio': {
-          const res = await fetch(`https://api.gateio.ws/api/v4/spot/candlesticks?currency_pair=${symbol}&interval=${gateioIntervals[timeframe]}&limit=100`);
-          const data = await res.json();
-          if (!Array.isArray(data)) return null;
-          return data.map((d: string[]) => [
-            parseFloat(d[0]) * 1000,
-            parseFloat(d[5]), // open
-            parseFloat(d[3]), // high
-            parseFloat(d[4]), // low
-            parseFloat(d[2]), // close
-            parseFloat(d[1])  // volume
-          ]);
-        }
         case 'kucoin': {
           const res = await fetch(`https://api.kucoin.com/api/v1/market/candles?type=${timeframe}&symbol=${symbol}`);
           const data = await res.json();
@@ -199,7 +187,7 @@ export function useCryptoScanner() {
           ]) || null;
         }
         case 'cryptocom': {
-          const interval = timeframe === '15m' ? '15m' : timeframe === '30m' ? '30m' : timeframe === '4h' ? '4h' : timeframe === '12h' ? '12h' : '1D';
+          const interval = timeframe === '5m' ? '5m' : timeframe === '15m' ? '15m' : timeframe === '30m' ? '30m' : timeframe === '1h' ? '1h' : timeframe === '4h' ? '4h' : '1D';
           const res = await fetch(`https://api.crypto.com/exchange/v1/public/get-candlestick?instrument_name=${symbol}&timeframe=${interval}`);
           const data = await res.json();
           if (data.result && data.result.data) {
@@ -215,8 +203,7 @@ export function useCryptoScanner() {
           return null;
         }
         case 'coingecko': {
-          // CoinGecko uses days for historical data
-          const days = timeframe === '1d' ? '100' : timeframe === '12h' ? '50' : timeframe === '4h' ? '20' : '7';
+          const days = timeframe === '1d' ? '100' : timeframe === '4h' ? '20' : '7';
           const res = await fetch(`https://api.coingecko.com/api/v3/coins/${symbol}/market_chart?vs_currency=usd&days=${days}`, {
             headers: {
               'x-cg-demo-api-key': COINGECKO_API_KEY
@@ -226,10 +213,10 @@ export function useCryptoScanner() {
           if (data.prices && data.total_volumes) {
             return data.prices.map((p: number[], i: number) => [
               p[0],
-              p[1], // open (using price)
-              p[1], // high (using price)
-              p[1], // low (using price)
-              p[1], // close (using price)
+              p[1],
+              p[1],
+              p[1],
+              p[1],
               data.total_volumes[i] ? data.total_volumes[i][1] : 0
             ]);
           }
@@ -264,8 +251,10 @@ export function useCryptoScanner() {
         case 'derivstockindices':
         case 'derivcommodity':
         case 'derivetfs': {
-          // Use Deriv WebSocket API for ticks/candles
-          const granularity = timeframe === '1m' ? 60 : timeframe === '5m' ? 300 : timeframe === '15m' ? 900 : timeframe === '30m' ? 1800 : timeframe === '4h' ? 14400 : timeframe === '12h' ? 43200 : 86400;
+          const granularityMap: Record<RsiTimeframe, number> = {
+            '5m': 300, '15m': 900, '30m': 1800, '1h': 3600, '4h': 14400, '1d': 86400
+          };
+          const granularity = granularityMap[timeframe];
           
           return new Promise((resolve) => {
             const ws = new WebSocket('wss://ws.derivws.com/websockets/v3?app_id=1089');
@@ -290,7 +279,7 @@ export function useCryptoScanner() {
                   c.high,
                   c.low,
                   c.close,
-                  0 // Deriv doesn't provide volume for synthetic indices
+                  0
                 ]);
                 ws.close();
                 resolve(klines);
@@ -306,7 +295,6 @@ export function useCryptoScanner() {
               resolve(null);
             };
             
-            // Timeout after 10 seconds
             setTimeout(() => {
               ws.close();
               resolve(null);
@@ -321,69 +309,89 @@ export function useCryptoScanner() {
     }
   };
 
-  const fetchPairData = async (exchange: Exchange, symbol: string, timeframe: Timeframe, retryCount = 0): Promise<CryptoPair | null> => {
-    const klines = await fetchKlines(exchange, symbol, timeframe);
-    if (!klines || klines.length < 14) {
-      // Retry once for leveragespecials/spotspecials in case of transient failure
-      if ((exchange === 'leveragespecials' || exchange === 'spotspecials') && retryCount < 1) {
-        await new Promise(r => setTimeout(r, 500));
-        return fetchPairData(exchange, symbol, timeframe, retryCount + 1);
+  const fetchPairData = async (exchange: Exchange, symbol: string, retryCount = 0): Promise<CryptoPair | null> => {
+    try {
+      // Fetch all timeframes for RSI
+      const rsiResults: { [key in RsiTimeframe]?: number | null } = {};
+      let price = 0;
+      let volume = 0;
+
+      // Fetch 4h timeframe first to get price/volume
+      const baseKlines = await fetchKlines(exchange, symbol, '4h');
+      if (!baseKlines || baseKlines.length < 14) {
+        if ((exchange === 'l1s' || exchange === 'meme') && retryCount < 1) {
+          await new Promise(r => setTimeout(r, 500));
+          return fetchPairData(exchange, symbol, retryCount + 1);
+        }
+        return null;
       }
+
+      const latest = baseKlines[baseKlines.length - 1];
+      price = latest[4];
+      volume = baseKlines.map(k => k[5]).reduce((a, b) => a + b, 0) / baseKlines.length;
+
+      // Fetch RSI for all timeframes in parallel
+      const timeframePromises = RSI_TIMEFRAMES.map(async (tf) => {
+        const klines = await fetchKlines(exchange, symbol, tf);
+        if (klines && klines.length >= 14) {
+          const closes = klines.map(k => k[4]);
+          rsiResults[tf] = calculateRSI(closes, 14);
+        } else {
+          rsiResults[tf] = null;
+        }
+      });
+
+      await Promise.all(timeframePromises);
+
+      let formattedSymbol = symbol;
+      if (exchange === 'binance' || exchange === 'bybit') {
+        formattedSymbol = symbol.replace('USDT', '/USDT');
+      } else if (exchange === 'kucoin') {
+        formattedSymbol = symbol.replace('-', '/');
+      } else if (exchange === 'cryptocom') {
+        formattedSymbol = symbol.replace('_', '/');
+      } else if (exchange === 'coingecko' || exchange === 'coinmarketcap') {
+        formattedSymbol = symbol.toUpperCase() + '/USD';
+      } else if (exchange === 'l1s' || exchange === 'meme') {
+        formattedSymbol = symbol.toUpperCase() + '/USDT';
+      } else if (exchange === 'deriv') {
+        const derivIndex = DERIV_SYNTHETIC_INDICES.find(s => s.symbol === symbol);
+        formattedSymbol = derivIndex?.name || symbol;
+      } else if (exchange === 'derivforex') {
+        const forexPair = derivForexPairs.find(s => s.symbol === symbol);
+        formattedSymbol = forexPair?.name || symbol;
+      } else if (exchange === 'derivstocks') {
+        const stock = derivStocks.find(s => s.symbol === symbol);
+        formattedSymbol = stock?.name || symbol;
+      } else if (exchange === 'derivstockindices') {
+        const index = derivStockIndices.find(s => s.symbol === symbol);
+        formattedSymbol = index?.name || symbol;
+      } else if (exchange === 'derivcommodity') {
+        const commodity = derivCommodities.find(s => s.symbol === symbol);
+        formattedSymbol = commodity?.name || symbol;
+      } else if (exchange === 'derivetfs') {
+        const etf = derivETFs.find(s => s.symbol === symbol);
+        formattedSymbol = etf?.name || symbol;
+      }
+
+      return {
+        symbol: formattedSymbol,
+        price,
+        volume,
+        rsi5m: rsiResults['5m'] ?? null,
+        rsi15m: rsiResults['15m'] ?? null,
+        rsi30m: rsiResults['30m'] ?? null,
+        rsi1h: rsiResults['1h'] ?? null,
+        rsi4h: rsiResults['4h'] ?? null,
+        rsi1d: rsiResults['1d'] ?? null,
+      };
+    } catch (e) {
+      console.error('Error fetching pair data:', e);
       return null;
     }
-
-    const highs = klines.map(k => k[2]);
-    const lows = klines.map(k => k[3]);
-    const closes = klines.map(k => k[4]);
-    const volumes = klines.map(k => k[5]);
-
-    const rsi = calculateRSI(closes, 14);
-    const stochRsi = calculateStochRSI(closes, 14, 14);
-    const mfi = calculateMFI(highs, lows, closes, volumes, 14);
-    const latest = klines[klines.length - 1];
-
-    let formattedSymbol = symbol;
-    if (exchange === 'binance' || exchange === 'bybit' || exchange === 'spotspecials') {
-      formattedSymbol = symbol.replace('USDT', '/USDT');
-    } else if (exchange === 'leveragespecials') {
-      formattedSymbol = symbol.replace('_', '/');
-    } else if (exchange === 'kucoin') {
-      formattedSymbol = symbol.replace('-', '/');
-    } else if (exchange === 'cryptocom') {
-      formattedSymbol = symbol.replace('_', '/');
-    } else if (exchange === 'coingecko' || exchange === 'coinmarketcap') {
-      formattedSymbol = symbol.toUpperCase() + '/USD';
-    } else if (exchange === 'deriv') {
-      const derivIndex = DERIV_SYNTHETIC_INDICES.find(s => s.symbol === symbol);
-      formattedSymbol = derivIndex?.name || symbol;
-    } else if (exchange === 'derivforex') {
-      const forexPair = derivForexPairs.find(s => s.symbol === symbol);
-      formattedSymbol = forexPair?.name || symbol;
-    } else if (exchange === 'derivstocks') {
-      const stock = derivStocks.find(s => s.symbol === symbol);
-      formattedSymbol = stock?.name || symbol;
-    } else if (exchange === 'derivstockindices') {
-      const index = derivStockIndices.find(s => s.symbol === symbol);
-      formattedSymbol = index?.name || symbol;
-    } else if (exchange === 'derivcommodity') {
-      const commodity = derivCommodities.find(s => s.symbol === symbol);
-      formattedSymbol = commodity?.name || symbol;
-    } else if (exchange === 'derivetfs') {
-      const etf = derivETFs.find(s => s.symbol === symbol);
-      formattedSymbol = etf?.name || symbol;
-    }
-
-    return {
-      symbol: formattedSymbol,
-      price: latest[4],
-      volume: volumes.reduce((a, b) => a + b, 0) / volumes.length,
-      rsi,
-      stochRsi,
-      mfi
-    };
   };
 
-  const loadData = useCallback(async (exchange: Exchange, timeframe: Timeframe) => {
+  const loadData = useCallback(async (exchange: Exchange, _timeframe: Timeframe) => {
     setLoading(true);
     setPairs([]);
     setProgress({ current: 0, total: 0 });
@@ -392,13 +400,12 @@ export function useCryptoScanner() {
     setProgress({ current: 0, total: symbols.length });
 
     const results: CryptoPair[] = [];
-    // Use smaller batch size for specials to avoid rate limiting
-    const batchSize = (exchange === 'leveragespecials' || exchange === 'spotspecials') ? 5 : 10;
+    const batchSize = (exchange === 'l1s' || exchange === 'meme') ? 3 : 5;
 
     for (let i = 0; i < symbols.length; i += batchSize) {
       const batch = symbols.slice(i, i + batchSize);
       const batchResults = await Promise.all(
-        batch.map(symbol => fetchPairData(exchange, symbol, timeframe))
+        batch.map(symbol => fetchPairData(exchange, symbol))
       );
       
       const validResults = batchResults.filter((r): r is CryptoPair => r !== null);
@@ -406,9 +413,8 @@ export function useCryptoScanner() {
       setProgress({ current: Math.min(i + batchSize, symbols.length), total: symbols.length });
       setPairs([...results]);
       
-      // Add small delay between batches for specials to avoid rate limiting
-      if ((exchange === 'leveragespecials' || exchange === 'spotspecials') && i + batchSize < symbols.length) {
-        await new Promise(r => setTimeout(r, 200));
+      if ((exchange === 'l1s' || exchange === 'meme') && i + batchSize < symbols.length) {
+        await new Promise(r => setTimeout(r, 300));
       }
     }
 
@@ -418,35 +424,35 @@ export function useCryptoScanner() {
   const sortPairs = useCallback((pairsToSort: CryptoPair[], sortBy: SortBy): CryptoPair[] => {
     const sorted = [...pairsToSort];
     
-    // Calculate average score: average of RSI, StochRSI, and MFI
-    const getAvgScore = (pair: CryptoPair) => {
-      const rsi = pair.rsi ?? 50;
-      const stochRsi = pair.stochRsi ?? 50;
-      const mfi = pair.mfi ?? 50;
-      return (rsi + stochRsi + mfi) / 3;
-    };
-    
     switch (sortBy) {
-      case 'avg_buy':
-        // Best buy = lowest avg score (oversold)
-        return sorted.sort((a, b) => getAvgScore(a) - getAvgScore(b));
-      case 'avg_sell':
-        // Best sell = highest avg score (overbought)
-        return sorted.sort((a, b) => getAvgScore(b) - getAvgScore(a));
-      case 'stochrsi_desc':
-        return sorted.sort((a, b) => (b.stochRsi || 0) - (a.stochRsi || 0));
-      case 'stochrsi_asc':
-        return sorted.sort((a, b) => (a.stochRsi || 0) - (b.stochRsi || 0));
-      case 'rsi_desc':
-        return sorted.sort((a, b) => (b.rsi || 0) - (a.rsi || 0));
-      case 'rsi_asc':
-        return sorted.sort((a, b) => (a.rsi || 0) - (b.rsi || 0));
-      case 'mfi_desc':
-        return sorted.sort((a, b) => (b.mfi || 0) - (a.mfi || 0));
-      case 'mfi_asc':
-        return sorted.sort((a, b) => (a.mfi || 0) - (b.mfi || 0));
-      case 'volume_desc':
-        return sorted.sort((a, b) => b.volume - a.volume);
+      case 'price_asc':
+        return sorted.sort((a, b) => a.price - b.price);
+      case 'price_desc':
+        return sorted.sort((a, b) => b.price - a.price);
+      case 'rsi5m_asc':
+        return sorted.sort((a, b) => (a.rsi5m ?? 100) - (b.rsi5m ?? 100));
+      case 'rsi5m_desc':
+        return sorted.sort((a, b) => (b.rsi5m ?? 0) - (a.rsi5m ?? 0));
+      case 'rsi15m_asc':
+        return sorted.sort((a, b) => (a.rsi15m ?? 100) - (b.rsi15m ?? 100));
+      case 'rsi15m_desc':
+        return sorted.sort((a, b) => (b.rsi15m ?? 0) - (a.rsi15m ?? 0));
+      case 'rsi30m_asc':
+        return sorted.sort((a, b) => (a.rsi30m ?? 100) - (b.rsi30m ?? 100));
+      case 'rsi30m_desc':
+        return sorted.sort((a, b) => (b.rsi30m ?? 0) - (a.rsi30m ?? 0));
+      case 'rsi1h_asc':
+        return sorted.sort((a, b) => (a.rsi1h ?? 100) - (b.rsi1h ?? 100));
+      case 'rsi1h_desc':
+        return sorted.sort((a, b) => (b.rsi1h ?? 0) - (a.rsi1h ?? 0));
+      case 'rsi4h_asc':
+        return sorted.sort((a, b) => (a.rsi4h ?? 100) - (b.rsi4h ?? 100));
+      case 'rsi4h_desc':
+        return sorted.sort((a, b) => (b.rsi4h ?? 0) - (a.rsi4h ?? 0));
+      case 'rsi1d_asc':
+        return sorted.sort((a, b) => (a.rsi1d ?? 100) - (b.rsi1d ?? 100));
+      case 'rsi1d_desc':
+        return sorted.sort((a, b) => (b.rsi1d ?? 0) - (a.rsi1d ?? 0));
       default:
         return sorted;
     }
