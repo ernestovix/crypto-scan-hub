@@ -1,10 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Exchange, Timeframe, CryptoPair, exchanges } from '@/lib/exchanges';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { Exchange, CryptoPair, exchanges } from '@/lib/exchanges';
 import { useCryptoScanner, SortBy } from '@/hooks/useCryptoScanner';
-import { ScannerControls } from './ScannerControls';
 import { PairTable } from './PairTable';
 import { PairDetailPage } from './PairDetailPage';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, X } from 'lucide-react';
 
 interface ScannerPageProps {
   exchange: Exchange;
@@ -12,29 +11,43 @@ interface ScannerPageProps {
 }
 
 export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
-  const [sortBy, setSortBy] = useState<SortBy>('avg_buy'); // Default to Avg ↑
+  const [sortBy, setSortBy] = useState<SortBy>('rsi4h_asc');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPair, setSelectedPair] = useState<CryptoPair | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { pairs, loading, progress, loadData, sortPairs, filterPairs } = useCryptoScanner();
 
   const exchangeInfo = exchanges.find(e => e.id === exchange);
 
   useEffect(() => {
-    // Always use 4h as default timeframe
     loadData(exchange, '4h');
   }, [exchange, loadData]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const filteredAndSortedPairs = useMemo(() => {
     const filtered = filterPairs(pairs, searchQuery);
     return sortPairs(filtered, sortBy);
   }, [pairs, searchQuery, sortBy, filterPairs, sortPairs]);
 
+  const filteredSuggestions = pairs
+    .filter(p => p.symbol.toLowerCase().includes(searchQuery.toLowerCase()))
+    .slice(0, 10);
+
   const handlePairClick = (pair: CryptoPair) => {
     setSelectedPair(pair);
   };
 
-  // Show pair detail page if a pair is selected
   if (selectedPair) {
     return (
       <PairDetailPage 
@@ -79,14 +92,51 @@ export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
         </div>
       </div>
 
-      {/* Controls - No timeframe selector */}
-      <ScannerControls
-        sortBy={sortBy}
-        searchQuery={searchQuery}
-        pairs={pairs}
-        onSortChange={setSortBy}
-        onSearchChange={setSearchQuery}
-      />
+      {/* Search Bar */}
+      <div className="bg-card p-6 border-b border-border">
+        <div className="relative max-w-md" ref={dropdownRef}>
+          <label className="block text-sm font-medium mb-2 text-muted-foreground">Search Pairs</label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowDropdown(true);
+              }}
+              onFocus={() => setShowDropdown(true)}
+              placeholder="Type to search pairs..."
+              className="w-full bg-secondary border border-border rounded-lg pl-10 pr-10 py-3 text-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          
+          {showDropdown && searchQuery && filteredSuggestions.length > 0 && (
+            <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              {filteredSuggestions.map((pair) => (
+                <button
+                  key={pair.symbol}
+                  onClick={() => {
+                    setSearchQuery(pair.symbol);
+                    setShowDropdown(false);
+                  }}
+                  className="w-full px-4 py-2 text-left hover:bg-secondary transition-colors text-foreground"
+                >
+                  {pair.symbol}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Progress Bar */}
       {loading && progress.total > 0 && (
@@ -106,6 +156,8 @@ export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
         exchange={exchange} 
         loading={loading}
         onPairClick={handlePairClick}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
       />
     </div>
   );

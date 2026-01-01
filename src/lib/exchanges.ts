@@ -1,4 +1,4 @@
-export type Exchange = 'binance' | 'bybit' | 'kucoin' | 'cryptocom' | 'coinmarketcap' | 'coingecko' | 'deriv' | 'derivforex' | 'derivstocks' | 'derivstockindices' | 'derivcommodity' | 'derivetfs' | 'spotspecials' | 'leveragespecials' | 'gateio';
+export type Exchange = 'binance' | 'bybit' | 'kucoin' | 'cryptocom' | 'coinmarketcap' | 'coingecko' | 'deriv' | 'derivforex' | 'derivstocks' | 'derivstockindices' | 'derivcommodity' | 'derivetfs' | 'l1s' | 'meme';
 
 export interface ExchangeInfo {
   id: Exchange;
@@ -20,8 +20,8 @@ export const exchanges: ExchangeInfo[] = [
   { id: 'derivstockindices', name: 'Deriv Stock Indices', logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRHtsVJDNvheGvB4o2auaoJOYisHNR8g0qRLslOiyoMGQ&s=10', hoverColor: 'hover:bg-violet-600' },
   { id: 'derivcommodity', name: 'Deriv Commodity', logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRHtsVJDNvheGvB4o2auaoJOYisHNR8g0qRLslOiyoMGQ&s=10', hoverColor: 'hover:bg-amber-600' },
   { id: 'derivetfs', name: 'Deriv ETFs', logo: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRHtsVJDNvheGvB4o2auaoJOYisHNR8g0qRLslOiyoMGQ&s=10', hoverColor: 'hover:bg-teal-600' },
-  { id: 'spotspecials', name: 'Spot Specials', logo: 'https://thumbs.dreamstime.com/b/dollar-symbol-4647739.jpg', hoverColor: 'hover:bg-emerald-600' },
-  { id: 'leveragespecials', name: 'Leverage Special', logo: 'https://img.icons8.com/fluency/96/british-pound.png', hoverColor: 'hover:bg-purple-600' },
+  { id: 'l1s', name: 'L1S Pairs', logo: 'https://thumbs.dreamstime.com/b/dollar-symbol-4647739.jpg', hoverColor: 'hover:bg-emerald-600' },
+  { id: 'meme', name: 'Meme Pairs', logo: 'https://img.icons8.com/fluency/96/british-pound.png', hoverColor: 'hover:bg-purple-600' },
 ];
 
 export type Timeframe = '1m' | '5m' | '15m' | '30m' | '4h' | '12h' | '1d';
@@ -30,9 +30,12 @@ export interface CryptoPair {
   symbol: string;
   price: number;
   volume: number;
-  rsi: number | null;
-  stochRsi: number | null;
-  mfi: number | null;
+  rsi5m: number | null;
+  rsi15m: number | null;
+  rsi30m: number | null;
+  rsi1h: number | null;
+  rsi4h: number | null;
+  rsi1d: number | null;
 }
 
 export function calculateRSI(closes: number[], period = 14): number | null {
@@ -64,65 +67,6 @@ export function calculateRSI(closes: number[], period = 14): number | null {
   return 100 - (100 / (1 + rs));
 }
 
-export function calculateStochRSI(closes: number[], rsiPeriod = 14, stochPeriod = 14): number | null {
-  if (closes.length < rsiPeriod + stochPeriod + 1) return null;
-  
-  // Calculate RSI values for each position
-  const rsiValues: number[] = [];
-  
-  for (let i = rsiPeriod; i < closes.length; i++) {
-    const slicedCloses = closes.slice(0, i + 1);
-    const rsi = calculateRSI(slicedCloses, rsiPeriod);
-    if (rsi !== null) {
-      rsiValues.push(rsi);
-    }
-  }
-  
-  if (rsiValues.length < stochPeriod) return null;
-  
-  // Get the last stochPeriod RSI values
-  const recentRsi = rsiValues.slice(-stochPeriod);
-  const currentRsi = recentRsi[recentRsi.length - 1];
-  const minRsi = Math.min(...recentRsi);
-  const maxRsi = Math.max(...recentRsi);
-  
-  if (maxRsi === minRsi) return 50; // Avoid division by zero
-  
-  // StochRSI = (RSI - min(RSI)) / (max(RSI) - min(RSI)) * 100
-  return ((currentRsi - minRsi) / (maxRsi - minRsi)) * 100;
-}
-
-export function calculateMFI(highs: number[], lows: number[], closes: number[], volumes: number[], period = 14): number | null {
-  if (closes.length < period + 1) return null;
-  
-  const typicalPrices: number[] = [];
-  for (let i = 0; i < closes.length; i++) {
-    typicalPrices.push((highs[i] + lows[i] + closes[i]) / 3);
-  }
-  
-  const rawMoneyFlows: number[] = [];
-  for (let i = 0; i < typicalPrices.length; i++) {
-    rawMoneyFlows.push(typicalPrices[i] * volumes[i]);
-  }
-  
-  let positiveFlow = 0;
-  let negativeFlow = 0;
-  
-  for (let i = closes.length - period; i < closes.length; i++) {
-    if (i > 0) {
-      if (typicalPrices[i] > typicalPrices[i - 1]) {
-        positiveFlow += rawMoneyFlows[i];
-      } else if (typicalPrices[i] < typicalPrices[i - 1]) {
-        negativeFlow += rawMoneyFlows[i];
-      }
-    }
-  }
-  
-  if (negativeFlow === 0) return 100;
-  const moneyRatio = positiveFlow / negativeFlow;
-  return 100 - (100 / (1 + moneyRatio));
-}
-
 export function formatPrice(p: number): string {
   return p < 1 ? p.toFixed(6) : p.toFixed(2);
 }
@@ -148,14 +92,13 @@ export function getTradingUrl(exchange: Exchange, symbol: string): string {
     derivstockindices: 'https://deriv.com/dtrader',
     derivcommodity: 'https://deriv.com/dtrader',
     derivetfs: 'https://deriv.com/dtrader',
-    spotspecials: 'https://www.binance.com/en/trade/',
-    leveragespecials: 'https://www.gate.io/trade/',
-    gateio: 'https://www.gate.io/trade/'
+    l1s: 'https://coinmarketcap.com/currencies/',
+    meme: 'https://coinmarketcap.com/currencies/'
   };
   
   const cleanSymbol = symbol.replace('/', '_').replace('/USDT', '').replace('_USDT', '').toLowerCase();
   
-  if (exchange === 'coinmarketcap' || exchange === 'coingecko') {
+  if (exchange === 'coinmarketcap' || exchange === 'coingecko' || exchange === 'l1s' || exchange === 'meme') {
     return base[exchange] + cleanSymbol;
   }
   
@@ -250,8 +193,8 @@ export const derivETFs = [
   { symbol: 'VXX', name: 'iPath Series B S&P 500 VIX' },
 ];
 
-// Special pairs lists
-export const spotSpecialPairs = [
+// L1S Pairs (formerly spotspecialpairs) - using CoinMarketCap
+export const L1SPairs = [
   "BTC/USDT",
   "ETH/USDT",
   "XRP/USDT",
@@ -261,7 +204,8 @@ export const spotSpecialPairs = [
   "DOGE/USDT"
 ];
 
-export const leverageSpecialPairs = [
+// Meme Pairs (formerly leveragespecialpairs) - using CoinMarketCap
+export const MemePairs = [
   "PEPE/USDT",
   "SUI/USDT",
   "FARTCOIN/USDT",
