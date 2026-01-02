@@ -1,5 +1,7 @@
 export type Exchange = 'binance' | 'bybit' | 'kucoin' | 'cryptocom' | 'coinmarketcap' | 'coingecko' | 'deriv' | 'derivforex' | 'derivstocks' | 'derivstockindices' | 'derivcommodity' | 'derivetfs' | 'l1s' | 'meme';
 
+export type Timeframe = '5m' | '15m' | '30m' | '1h' | '4h' | '1d';
+
 export interface ExchangeInfo {
   id: Exchange;
   name: string;
@@ -24,18 +26,13 @@ export const exchanges: ExchangeInfo[] = [
   { id: 'meme', name: 'Meme Pairs', logo: 'https://img.icons8.com/fluency/96/british-pound.png', hoverColor: 'hover:bg-purple-600' },
 ];
 
-export type Timeframe = '1m' | '5m' | '15m' | '30m' | '4h' | '12h' | '1d';
-
 export interface CryptoPair {
   symbol: string;
   price: number;
-  volume: number;
-  rsi5m: number | null;
-  rsi15m: number | null;
-  rsi30m: number | null;
-  rsi1h: number | null;
-  rsi4h: number | null;
-  rsi1d: number | null;
+  rsi: number | null;
+  srsi: number | null;
+  mfi: number | null;
+  rvi: number | null;
 }
 
 export function calculateRSI(closes: number[], period = 14): number | null {
@@ -65,6 +62,84 @@ export function calculateRSI(closes: number[], period = 14): number | null {
   if (avgLoss === 0) return 100;
   const rs = avgGain / avgLoss;
   return 100 - (100 / (1 + rs));
+}
+
+export function calculateStochRSI(closes: number[], rsiPeriod = 14, stochPeriod = 14): number | null {
+  if (closes.length < rsiPeriod + stochPeriod) return null;
+  
+  const rsiValues: number[] = [];
+  for (let i = rsiPeriod; i <= closes.length; i++) {
+    const rsi = calculateRSI(closes.slice(0, i), rsiPeriod);
+    if (rsi !== null) rsiValues.push(rsi);
+  }
+  
+  if (rsiValues.length < stochPeriod) return null;
+  
+  const recentRSI = rsiValues.slice(-stochPeriod);
+  const minRSI = Math.min(...recentRSI);
+  const maxRSI = Math.max(...recentRSI);
+  
+  if (maxRSI === minRSI) return 50;
+  
+  const currentRSI = rsiValues[rsiValues.length - 1];
+  return ((currentRSI - minRSI) / (maxRSI - minRSI)) * 100;
+}
+
+export function calculateMFI(highs: number[], lows: number[], closes: number[], volumes: number[], period = 14): number | null {
+  if (closes.length < period + 1 || volumes.length < period + 1) return null;
+  
+  const typicalPrices: number[] = [];
+  for (let i = 0; i < closes.length; i++) {
+    typicalPrices.push((highs[i] + lows[i] + closes[i]) / 3);
+  }
+  
+  const rawMoneyFlow: number[] = [];
+  for (let i = 0; i < typicalPrices.length; i++) {
+    rawMoneyFlow.push(typicalPrices[i] * volumes[i]);
+  }
+  
+  let positiveFlow = 0;
+  let negativeFlow = 0;
+  
+  const start = rawMoneyFlow.length - period;
+  for (let i = start; i < rawMoneyFlow.length; i++) {
+    if (i > 0 && typicalPrices[i] > typicalPrices[i - 1]) {
+      positiveFlow += rawMoneyFlow[i];
+    } else if (i > 0 && typicalPrices[i] < typicalPrices[i - 1]) {
+      negativeFlow += rawMoneyFlow[i];
+    }
+  }
+  
+  if (negativeFlow === 0) return 100;
+  const moneyRatio = positiveFlow / negativeFlow;
+  return 100 - (100 / (1 + moneyRatio));
+}
+
+export function calculateRVI(opens: number[], highs: number[], lows: number[], closes: number[], period = 10): number | null {
+  if (closes.length < period + 3) return null;
+  
+  // RVI = SMA of (Close - Open) / (High - Low)
+  const numerators: number[] = [];
+  const denominators: number[] = [];
+  
+  for (let i = 3; i < closes.length; i++) {
+    // Smoothed values using weighted moving average
+    const closeOpen = (closes[i] - opens[i]) + 2 * (closes[i-1] - opens[i-1]) + 2 * (closes[i-2] - opens[i-2]) + (closes[i-3] - opens[i-3]);
+    const highLow = (highs[i] - lows[i]) + 2 * (highs[i-1] - lows[i-1]) + 2 * (highs[i-2] - lows[i-2]) + (highs[i-3] - lows[i-3]);
+    numerators.push(closeOpen / 6);
+    denominators.push(highLow / 6);
+  }
+  
+  if (numerators.length < period) return null;
+  
+  const sumNumerator = numerators.slice(-period).reduce((a, b) => a + b, 0);
+  const sumDenominator = denominators.slice(-period).reduce((a, b) => a + b, 0);
+  
+  if (sumDenominator === 0) return 50;
+  
+  // RVI oscillates around 0, convert to 0-100 scale
+  const rvi = sumNumerator / sumDenominator;
+  return 50 + (rvi * 50);
 }
 
 export function formatPrice(p: number): string {
@@ -297,3 +372,31 @@ export const MemePairs = [
   "TOSHI/USDT",
   "COOKIE/USDT"
 ];
+
+// Favorites management
+const FAVORITES_KEY = 'crypto_scanner_favorites';
+
+export function getFavorites(): string[] {
+  try {
+    const stored = localStorage.getItem(FAVORITES_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function toggleFavorite(symbol: string): string[] {
+  const favorites = getFavorites();
+  const index = favorites.indexOf(symbol);
+  if (index === -1) {
+    favorites.push(symbol);
+  } else {
+    favorites.splice(index, 1);
+  }
+  localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+  return favorites;
+}
+
+export function isFavorite(symbol: string): boolean {
+  return getFavorites().includes(symbol);
+}
