@@ -1,34 +1,69 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Exchange, CryptoPair, exchanges } from '@/lib/exchanges';
+import { Exchange, Timeframe, CryptoPair, exchanges } from '@/lib/exchanges';
 import { useCryptoScanner, SortBy } from '@/hooks/useCryptoScanner';
 import { PairTable } from './PairTable';
 import { PairDetailPage } from './PairDetailPage';
-import { ArrowLeft, Loader2, Search, X } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, X, ChevronDown, Star } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ScannerPageProps {
   exchange: Exchange;
   onBack: () => void;
 }
 
+const TIMEFRAMES: { value: Timeframe; label: string }[] = [
+  { value: '5m', label: '5m' },
+  { value: '15m', label: '15m' },
+  { value: '30m', label: '30m' },
+  { value: '1h', label: '1h' },
+  { value: '4h', label: '4h' },
+  { value: '1d', label: '1D' },
+];
+
+const SORT_OPTIONS: { value: SortBy; label: string }[] = [
+  { value: 'rsi_asc', label: 'RSI ↑' },
+  { value: 'rsi_desc', label: 'RSI ↓' },
+  { value: 'srsi_asc', label: 'SRSI ↑' },
+  { value: 'srsi_desc', label: 'SRSI ↓' },
+  { value: 'mfi_asc', label: 'MFI ↑' },
+  { value: 'mfi_desc', label: 'MFI ↓' },
+  { value: 'rvi_asc', label: 'RVI ↑' },
+  { value: 'rvi_desc', label: 'RVI ↓' },
+  { value: 'price_asc', label: 'Price ↑' },
+  { value: 'price_desc', label: 'Price ↓' },
+];
+
 export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
-  const [sortBy, setSortBy] = useState<SortBy>('rsi4h_asc');
+  const [sortBy, setSortBy] = useState<SortBy>('rsi_asc');
+  const [timeframe, setTimeframe] = useState<Timeframe>('4h');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedPair, setSelectedPair] = useState<CryptoPair | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [showTimeframeDropdown, setShowTimeframeDropdown] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const timeframeDropdownRef = useRef<HTMLDivElement>(null);
 
   const { pairs, loading, progress, loadData, sortPairs, filterPairs } = useCryptoScanner();
 
   const exchangeInfo = exchanges.find(e => e.id === exchange);
 
   useEffect(() => {
-    loadData(exchange, '4h');
-  }, [exchange, loadData]);
+    loadData(exchange, timeframe);
+  }, [exchange, timeframe, loadData]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowDropdown(false);
+      }
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(event.target as Node)) {
+        setShowSortDropdown(false);
+      }
+      if (timeframeDropdownRef.current && !timeframeDropdownRef.current.contains(event.target as Node)) {
+        setShowTimeframeDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -92,49 +127,131 @@ export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
         </div>
       </div>
 
-      {/* Search Bar */}
+      {/* Controls Bar */}
       <div className="bg-card p-6 border-b border-border">
-        <div className="relative max-w-md" ref={dropdownRef}>
-          <label className="block text-sm font-medium mb-2 text-muted-foreground">Search Pairs</label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setShowDropdown(true);
-              }}
-              onFocus={() => setShowDropdown(true)}
-              placeholder="Type to search pairs..."
-              className="w-full bg-secondary border border-border rounded-lg pl-10 pr-10 py-3 text-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="w-4 h-4" />
-              </button>
+        <div className="flex flex-wrap items-end gap-4">
+          {/* Timeframe Dropdown */}
+          <div className="relative" ref={timeframeDropdownRef}>
+            <label className="block text-sm font-medium mb-2 text-muted-foreground">Timeframe</label>
+            <button
+              onClick={() => setShowTimeframeDropdown(!showTimeframeDropdown)}
+              className="flex items-center gap-2 bg-secondary border border-border rounded-lg px-4 py-3 text-foreground hover:bg-secondary/80 transition-colors min-w-[100px]"
+            >
+              <span>{TIMEFRAMES.find(t => t.value === timeframe)?.label}</span>
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            </button>
+            {showTimeframeDropdown && (
+              <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+                {TIMEFRAMES.map((tf) => (
+                  <button
+                    key={tf.value}
+                    onClick={() => {
+                      setTimeframe(tf.value);
+                      setShowTimeframeDropdown(false);
+                    }}
+                    className={cn(
+                      "w-full px-4 py-2 text-left hover:bg-secondary transition-colors text-foreground",
+                      tf.value === timeframe && "bg-primary/20"
+                    )}
+                  >
+                    {tf.label}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
-          
-          {showDropdown && searchQuery && filteredSuggestions.length > 0 && (
-            <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
-              {filteredSuggestions.map((pair) => (
+
+          {/* Sort Dropdown */}
+          <div className="relative" ref={sortDropdownRef}>
+            <label className="block text-sm font-medium mb-2 text-muted-foreground">Sort By</label>
+            <button
+              onClick={() => setShowSortDropdown(!showSortDropdown)}
+              className="flex items-center gap-2 bg-secondary border border-border rounded-lg px-4 py-3 text-foreground hover:bg-secondary/80 transition-colors min-w-[120px]"
+            >
+              <span>{SORT_OPTIONS.find(s => s.value === sortBy)?.label}</span>
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            </button>
+            {showSortDropdown && (
+              <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {SORT_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      setSortBy(option.value);
+                      setShowSortDropdown(false);
+                    }}
+                    className={cn(
+                      "w-full px-4 py-2 text-left hover:bg-secondary transition-colors text-foreground",
+                      option.value === sortBy && "bg-primary/20"
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Favorites Toggle */}
+          <div>
+            <label className="block text-sm font-medium mb-2 text-muted-foreground">Filter</label>
+            <button
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className={cn(
+                "flex items-center gap-2 border rounded-lg px-4 py-3 transition-colors",
+                showFavoritesOnly 
+                  ? "bg-yellow-500/20 border-yellow-500 text-yellow-500" 
+                  : "bg-secondary border-border text-foreground hover:bg-secondary/80"
+              )}
+            >
+              <Star className={cn("w-4 h-4", showFavoritesOnly && "fill-yellow-500")} />
+              <span>Favorites</span>
+            </button>
+          </div>
+
+          {/* Search */}
+          <div className="relative flex-1 max-w-md" ref={dropdownRef}>
+            <label className="block text-sm font-medium mb-2 text-muted-foreground">Search Pairs</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setShowDropdown(true);
+                }}
+                onFocus={() => setShowDropdown(true)}
+                placeholder="Type to search pairs..."
+                className="w-full bg-secondary border border-border rounded-lg pl-10 pr-10 py-3 text-foreground focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+              />
+              {searchQuery && (
                 <button
-                  key={pair.symbol}
-                  onClick={() => {
-                    setSearchQuery(pair.symbol);
-                    setShowDropdown(false);
-                  }}
-                  className="w-full px-4 py-2 text-left hover:bg-secondary transition-colors text-foreground"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {pair.symbol}
+                  <X className="w-4 h-4" />
                 </button>
-              ))}
+              )}
             </div>
-          )}
+            
+            {showDropdown && searchQuery && filteredSuggestions.length > 0 && (
+              <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {filteredSuggestions.map((pair) => (
+                  <button
+                    key={pair.symbol}
+                    onClick={() => {
+                      setSearchQuery(pair.symbol);
+                      setShowDropdown(false);
+                    }}
+                    className="w-full px-4 py-2 text-left hover:bg-secondary transition-colors text-foreground"
+                  >
+                    {pair.symbol}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -158,6 +275,7 @@ export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
         onPairClick={handlePairClick}
         sortBy={sortBy}
         onSortChange={setSortBy}
+        showFavoritesOnly={showFavoritesOnly}
       />
     </div>
   );
