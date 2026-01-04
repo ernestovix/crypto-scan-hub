@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { Exchange, Timeframe, CryptoPair, exchanges } from '@/lib/exchanges';
 import { useCryptoScanner, SortBy } from '@/hooks/useCryptoScanner';
 import { PairTable } from './PairTable';
 import { PairDetailPage } from './PairDetailPage';
-import { ArrowLeft, Loader2, Search, X, ChevronDown, Star } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, X, ChevronDown, Star, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ScannerPageProps {
@@ -33,6 +33,12 @@ const SORT_OPTIONS: { value: SortBy; label: string }[] = [
   { value: 'price_desc', label: 'Price ↓' },
 ];
 
+const AUTO_REFRESH_OPTIONS = [
+  { value: 0, label: 'Off' },
+  { value: 30, label: '30s' },
+  { value: 60, label: '1m' },
+];
+
 export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
   const [sortBy, setSortBy] = useState<SortBy>('rsi_asc');
   const [timeframe, setTimeframe] = useState<Timeframe>('4h');
@@ -42,17 +48,37 @@ export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showTimeframeDropdown, setShowTimeframeDropdown] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(0);
+  const [showRefreshDropdown, setShowRefreshDropdown] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const dropdownRef = useRef<HTMLDivElement>(null);
   const sortDropdownRef = useRef<HTMLDivElement>(null);
   const timeframeDropdownRef = useRef<HTMLDivElement>(null);
+  const refreshDropdownRef = useRef<HTMLDivElement>(null);
 
   const { pairs, loading, progress, loadData, sortPairs, filterPairs } = useCryptoScanner();
 
   const exchangeInfo = exchanges.find(e => e.id === exchange);
 
-  useEffect(() => {
+  const handleRefresh = useCallback(() => {
     loadData(exchange, timeframe);
+    setLastRefresh(new Date());
   }, [exchange, timeframe, loadData]);
+
+  useEffect(() => {
+    handleRefresh();
+  }, [exchange, timeframe]);
+
+  // Auto-refresh effect
+  useEffect(() => {
+    if (autoRefresh === 0 || loading) return;
+    
+    const interval = setInterval(() => {
+      handleRefresh();
+    }, autoRefresh * 1000);
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, loading, handleRefresh]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -64,6 +90,9 @@ export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
       }
       if (timeframeDropdownRef.current && !timeframeDropdownRef.current.contains(event.target as Node)) {
         setShowTimeframeDropdown(false);
+      }
+      if (refreshDropdownRef.current && !refreshDropdownRef.current.contains(event.target as Node)) {
+        setShowRefreshDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -209,6 +238,56 @@ export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
             </button>
           </div>
 
+          {/* Auto-Refresh Dropdown */}
+          <div className="relative" ref={refreshDropdownRef}>
+            <label className="block text-sm font-medium mb-2 text-muted-foreground">Auto-Refresh</label>
+            <button
+              onClick={() => setShowRefreshDropdown(!showRefreshDropdown)}
+              className={cn(
+                "flex items-center gap-2 border rounded-lg px-4 py-3 transition-colors min-w-[100px]",
+                autoRefresh > 0 
+                  ? "bg-green-500/20 border-green-500 text-green-500" 
+                  : "bg-secondary border-border text-foreground hover:bg-secondary/80"
+              )}
+            >
+              <RefreshCw className={cn("w-4 h-4", autoRefresh > 0 && "animate-spin")} style={{ animationDuration: '3s' }} />
+              <span>{AUTO_REFRESH_OPTIONS.find(o => o.value === autoRefresh)?.label}</span>
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            </button>
+            {showRefreshDropdown && (
+              <div className="absolute z-50 w-full mt-1 bg-card border border-border rounded-lg shadow-lg overflow-hidden">
+                {AUTO_REFRESH_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    onClick={() => {
+                      setAutoRefresh(option.value);
+                      setShowRefreshDropdown(false);
+                    }}
+                    className={cn(
+                      "w-full px-4 py-2 text-left hover:bg-secondary transition-colors text-foreground",
+                      option.value === autoRefresh && "bg-primary/20"
+                    )}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Manual Refresh Button */}
+          <div>
+            <label className="block text-sm font-medium mb-2 text-muted-foreground">Refresh</label>
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="flex items-center gap-2 bg-primary border border-primary rounded-lg px-4 py-3 text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+              <span>Now</span>
+            </button>
+          </div>
+
           {/* Search */}
           <div className="relative flex-1 max-w-md" ref={dropdownRef}>
             <label className="block text-sm font-medium mb-2 text-muted-foreground">Search Pairs</label>
@@ -253,6 +332,14 @@ export function ScannerPage({ exchange, onBack }: ScannerPageProps) {
             )}
           </div>
         </div>
+
+        {/* Last refresh info */}
+        {!loading && pairs.length > 0 && (
+          <div className="mt-3 text-xs text-muted-foreground">
+            Last updated: {lastRefresh.toLocaleTimeString()}
+            {autoRefresh > 0 && ` • Auto-refreshing every ${autoRefresh}s`}
+          </div>
+        )}
       </div>
 
       {/* Progress Bar */}
