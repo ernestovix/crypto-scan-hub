@@ -43,31 +43,38 @@ export function useCryptoScanner() {
     try {
       switch (exchange) {
         case 'binance': {
-          const res = await fetch('https://corsproxy.io/?url=' + encodeURIComponent('https://api.binance.com/api/v3/exchangeInfo'));
+          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent('https://api.binance.com/api/v3/exchangeInfo')}`);
+          if (!res.ok) return [];
           const data = await res.json();
+          if (!data.symbols || !Array.isArray(data.symbols)) return [];
           return data.symbols
             .filter((s: { status: string; symbol: string }) => s.status === 'TRADING' && s.symbol.endsWith('USDT'))
             .slice(0, 100)
             .map((s: { symbol: string }) => s.symbol);
         }
         case 'bybit': {
-          const res = await fetch('https://corsproxy.io/?url=' + encodeURIComponent('https://api.bybit.com/v5/market/instruments-info?category=spot'));
+          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent('https://api.bybit.com/v5/market/instruments-info?category=spot')}`);
+          if (!res.ok) return [];
           const data = await res.json();
+          if (!data.result?.list) return [];
           return data.result.list
             .filter((s: { status: string; symbol: string }) => s.status === 'Trading' && s.symbol.endsWith('USDT'))
             .slice(0, 100)
             .map((s: { symbol: string }) => s.symbol);
         }
         case 'kucoin': {
-          const res = await fetch('https://corsproxy.io/?url=' + encodeURIComponent('https://api.kucoin.com/api/v1/symbols'));
+          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent('https://api.kucoin.com/api/v1/symbols')}`);
+          if (!res.ok) return [];
           const data = await res.json();
+          if (!data.data || !Array.isArray(data.data)) return [];
           return data.data
             .filter((s: { enableTrading: boolean; symbol: string }) => s.enableTrading && s.symbol.endsWith('-USDT'))
             .slice(0, 100)
             .map((s: { symbol: string }) => s.symbol);
         }
         case 'cryptocom': {
-          const res = await fetch('https://corsproxy.io/?url=' + encodeURIComponent('https://api.crypto.com/exchange/v1/public/get-instruments'));
+          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent('https://api.crypto.com/exchange/v1/public/get-instruments')}`);
+          if (!res.ok) return [];
           const data = await res.json();
           if (data.result && data.result.data) {
             return data.result.data
@@ -78,7 +85,9 @@ export function useCryptoScanner() {
           return [];
         }
         case 'coingecko': {
-          const res = await fetch('https://corsproxy.io/?url=' + encodeURIComponent('https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&x_cg_demo_api_key=' + COINGECKO_API_KEY));
+          const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&x_cg_demo_api_key=${COINGECKO_API_KEY}`;
+          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+          if (!res.ok) return [];
           const data = await res.json();
           if (Array.isArray(data)) {
             return data.map((coin: { id: string }) => coin.id);
@@ -86,7 +95,9 @@ export function useCryptoScanner() {
           return [];
         }
         case 'coinmarketcap': {
-          const res = await fetch('https://corsproxy.io/?url=' + encodeURIComponent('https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=100&CMC_PRO_API_KEY=' + COINMARKETCAP_API_KEY));
+          const url = `https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest?limit=100&CMC_PRO_API_KEY=${COINMARKETCAP_API_KEY}`;
+          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+          if (!res.ok) return [];
           const data = await res.json();
           if (data.data && Array.isArray(data.data)) {
             return data.data.map((coin: { slug: string }) => coin.slug);
@@ -129,54 +140,65 @@ export function useCryptoScanner() {
   const fetchKlines = async (exchange: Exchange, symbol: string, timeframe: Timeframe): Promise<number[][] | null> => {
     const bybitIntervals: Record<Timeframe, string> = { '5m': '5', '15m': '15', '30m': '30', '1h': '60', '4h': '240', '1d': 'D' };
     const binanceIntervals: Record<Timeframe, string> = { '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1h', '4h': '4h', '1d': '1d' };
+    const kucoinIntervals: Record<Timeframe, string> = { '5m': '5min', '15m': '15min', '30m': '30min', '1h': '1hour', '4h': '4hour', '1d': '1day' };
     
     try {
       const effectiveExchange = (exchange === 'l1s' || exchange === 'meme') ? 'coinmarketcap' : exchange;
       
       switch (effectiveExchange) {
         case 'binance': {
-          const res = await fetch('https://corsproxy.io/?url=' + encodeURIComponent(`https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${binanceIntervals[timeframe]}&limit=100`));
+          const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${binanceIntervals[timeframe]}&limit=100`;
+          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+          if (!res.ok) return null;
           const data = await res.json();
-          if (!Array.isArray(data)) return null;
-          return data.map((d: string[]) => [
-            parseFloat(d[0]),
-            parseFloat(d[1]),
-            parseFloat(d[2]),
-            parseFloat(d[3]),
-            parseFloat(d[4]),
-            parseFloat(d[5])
+          if (!Array.isArray(data) || data.length === 0) return null;
+          return data.map((d: (string | number)[]) => [
+            Number(d[0]),
+            parseFloat(String(d[1])),
+            parseFloat(String(d[2])),
+            parseFloat(String(d[3])),
+            parseFloat(String(d[4])),
+            parseFloat(String(d[5]))
           ]);
         }
         case 'bybit': {
-          const res = await fetch('https://corsproxy.io/?url=' + encodeURIComponent(`https://api.bybit.com/v5/market/kline?category=spot&symbol=${symbol}&interval=${bybitIntervals[timeframe]}&limit=100`));
+          const url = `https://api.bybit.com/v5/market/kline?category=spot&symbol=${symbol}&interval=${bybitIntervals[timeframe]}&limit=100`;
+          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+          if (!res.ok) return null;
           const data = await res.json();
-          if (!data.result?.list) return null;
+          if (!data.result?.list || data.result.list.length === 0) return null;
           return data.result.list.reverse().map((d: string[]) => [
             parseFloat(d[0]),
             parseFloat(d[1]),
             parseFloat(d[2]),
             parseFloat(d[3]),
             parseFloat(d[4]),
-            parseFloat(d[6])
+            parseFloat(d[6] || d[5])
           ]);
         }
         case 'kucoin': {
-          const res = await fetch('https://corsproxy.io/?url=' + encodeURIComponent(`https://api.kucoin.com/api/v1/market/candles?type=${timeframe}&symbol=${symbol}`));
+          const url = `https://api.kucoin.com/api/v1/market/candles?type=${kucoinIntervals[timeframe]}&symbol=${symbol}`;
+          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+          if (!res.ok) return null;
           const data = await res.json();
-          return data.data?.reverse().map((d: string[]) => [
+          if (!data.data || data.data.length === 0) return null;
+          // KuCoin format: [time, open, close, high, low, volume, turnover]
+          return data.data.reverse().map((d: string[]) => [
             parseFloat(d[0]) * 1000,
-            parseFloat(d[1]),
-            parseFloat(d[3]),
-            parseFloat(d[4]),
-            parseFloat(d[2]),
-            parseFloat(d[5])
-          ]) || null;
+            parseFloat(d[1]),  // open
+            parseFloat(d[3]),  // high
+            parseFloat(d[4]),  // low
+            parseFloat(d[2]),  // close
+            parseFloat(d[5])   // volume
+          ]);
         }
         case 'cryptocom': {
           const interval = timeframe === '5m' ? '5m' : timeframe === '15m' ? '15m' : timeframe === '30m' ? '30m' : timeframe === '1h' ? '1h' : timeframe === '4h' ? '4h' : '1D';
-          const res = await fetch('https://corsproxy.io/?url=' + encodeURIComponent(`https://api.crypto.com/exchange/v1/public/get-candlestick?instrument_name=${symbol}&timeframe=${interval}`));
+          const url = `https://api.crypto.com/exchange/v1/public/get-candlestick?instrument_name=${symbol}&timeframe=${interval}`;
+          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+          if (!res.ok) return null;
           const data = await res.json();
-          if (data.result && data.result.data) {
+          if (data.result && data.result.data && data.result.data.length > 0) {
             return data.result.data.map((d: { t: number; o: string; h: string; l: string; c: string; v: string }) => [
               d.t,
               parseFloat(d.o),
@@ -190,9 +212,11 @@ export function useCryptoScanner() {
         }
         case 'coingecko': {
           const days = timeframe === '1d' ? '100' : timeframe === '4h' ? '20' : '7';
-          const res = await fetch('https://corsproxy.io/?url=' + encodeURIComponent(`https://api.coingecko.com/api/v3/coins/${symbol}/market_chart?vs_currency=usd&days=${days}&x_cg_demo_api_key=${COINGECKO_API_KEY}`));
+          const url = `https://api.coingecko.com/api/v3/coins/${symbol}/market_chart?vs_currency=usd&days=${days}&x_cg_demo_api_key=${COINGECKO_API_KEY}`;
+          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+          if (!res.ok) return null;
           const data = await res.json();
-          if (data.prices && data.total_volumes) {
+          if (data.prices && data.total_volumes && data.prices.length > 0) {
             return data.prices.map((p: number[], i: number) => [
               p[0],
               p[1],
@@ -205,7 +229,9 @@ export function useCryptoScanner() {
           return null;
         }
         case 'coinmarketcap': {
-          const res = await fetch('https://corsproxy.io/?url=' + encodeURIComponent(`https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest?slug=${symbol}&CMC_PRO_API_KEY=${COINMARKETCAP_API_KEY}`));
+          const url = `https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest?slug=${symbol}&CMC_PRO_API_KEY=${COINMARKETCAP_API_KEY}`;
+          const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`);
+          if (!res.ok) return null;
           const data = await res.json();
           if (data.data) {
             const coinData = Object.values(data.data)[0] as { quote: { USD: { price: number; volume_24h: number } } };
